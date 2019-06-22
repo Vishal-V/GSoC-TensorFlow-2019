@@ -12,3 +12,9 @@ All my commits to Tensorflow during GSoC and a growing log to track my progress
 - Adding `tf.distribute.startegy` or `tf.distribute.MirroredStrategy` for scoping `tf.keras` models for distributed leaning and adding `tf.function` decorators wherever required to optimise the execution.
 - Subclassing the models and layers is considered best practice. So, will change some of them from The Functional API to subclassing API
 - Applied for beta access to use KeasTuner to tune parameters quickly and effectively
+
+### June 21 Some Proposed Additions
+- Keras-Tuner Tutorial : Based off of a trending Reddit thread
+- Tiny ImageNet Advanced CNNs : With a suitable migration guide
+- Tensorflow 2.0 Mask R-CNN
+- GAN architectures
