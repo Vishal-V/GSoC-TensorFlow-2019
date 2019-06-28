@@ -22,7 +22,7 @@ All the math operations have been rehomed to `tf.math` and need to be replaced f
 - Min-Max operations: `tf.math.maximum`, `tf.math.minimum`, `tf.math.argmax`, `tf.math.argmin`
 - Compare operations: `tf.math.greater`, `tf.math.logical_and`, `tf.math.equal`
 - Dimension operations: `tf.math.reduce_mean`, `tf.math.reduce_sum`
-
+#
 #### 4. Choose between using the Functional API and Subclassing the model
 The Functional API is the best way to create models with `tf.keras`. Subclassing the model provides more flexibility to experiment with and allows using loops and conditionals to create different models. This is good for R&D but the model cannot be exported.  
 For the subclassing, there are 3 main functions:
