@@ -6,7 +6,7 @@ TRAIN = "/content/tiny-imagenet-200/train/"
 VAL = "/content/tiny-imagenet-200/val/images"
 
 class LoadTinyImageNet(img_size=64, train_size=10000, val_size=1000):
-	def __init__():
+	def __init__(self, img_size, train_size, val_size):
 		self.img_size = img_size
 		self.train_size = train_size
 		self.val_size = val_size

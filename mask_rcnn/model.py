@@ -32,8 +32,8 @@ from collections import OrderedDict
 import multiprocessing
 import numpy as np
 import tensorflow as tf
-import tf.keras.backend as KB
-import tf.keras.layers as KL
+import tensorflow.keras.backend as KB
+import tensorflow.keras.layers as KL
 
 from mrcnn import utils
 

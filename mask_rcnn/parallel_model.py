@@ -29,12 +29,14 @@ https://github.com/fchollet/keras/blob/master/keras/utils/training_utils.py
 """
 
 import tensorflow as tf
-import keras.backend as K
-import keras.layers as KL
-import keras.models as KM
+
+# Requires TensorFlow 2.0
+assert tf.__version__.startswith('2')
+
+import tensorflow.keras.layers as KL
 
 
-class ParallelModel(KM.Model):
+class ParallelModel(tf.keras.Model):
     """Subclasses the standard Keras Model and adds multi-GPU support.
     It works by creating a copy of the model on each GPU. Then it slices
     the inputs and sends a slice to each copy of the model, and then
@@ -109,7 +111,7 @@ class ParallelModel(KM.Model):
                 # across it. If they don't, then the output is likely a loss
                 # or a metric value that gets averaged across the batch.
                 # Keras expects losses and metrics to be scalars.
-                if K.int_shape(outputs[0]) == ():
+                if tf.keras.backend.int_shape(outputs[0]) == ():
                     # Average
                     m = KL.Lambda(lambda o: tf.add_n(o) / len(outputs), name=name)(outputs)
                 else:
@@ -146,7 +148,7 @@ if __name__ == "__main__":
         # visualization in TensorBoard.
         tf.reset_default_graph()
 
-        inputs = KL.Input(shape=x_train.shape[1:], name="input_image")
+        inputs = tf.keras.Input(shape=x_train.shape[1:], name="input_image")
         x = KL.Conv2D(32, (3, 3), activation='relu', padding="same",
                       name="conv1")(inputs)
         x = KL.Conv2D(64, (3, 3), activation='relu', padding="same",
@@ -156,7 +158,7 @@ if __name__ == "__main__":
         x = KL.Dense(128, activation='relu', name="dense1")(x)
         x = KL.Dense(num_classes, activation='softmax', name="dense2")(x)
 
-        return KM.Model(inputs, x, "digit_classifier_model")
+        return tf.keras.Model(inputs, x, "digit_classifier_model")
 
     # Load MNIST Data
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
