@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Masked R-CNN.
+"""Masked R-CNN compatible with TF 2.0.
 
-Reference [
-Mask R-CNN](https://arxiv.org/abs/1703.06870)
+Reference:
+[Mask R-CNN](https://arxiv.org/abs/1703.06870)
 
-Adapted from [
-Matterport - Mask_RCNN](https://github.com/matterport/Mask_RCNN)
+Adapted from:
+[Matterport - Mask_RCNN](https://github.com/matterport/Mask_RCNN)
 
 """
 
@@ -61,20 +61,16 @@ def log(text, array=None):
 
 
 class BatchNorm(KL.BatchNormalization):
-    """Extends the Keras BatchNormalization class to allow a central place
-    to make changes if needed.
+    """Extends the Keras BatchNormalization class to allow frozen training for 
+    small batch sizes.
 
-    Batch normalization has a negative effect on training if batches are small
-    so this layer is often frozen (via setting in Config class) and functions
-    as linear layer.
+    Args:
+        None: Train BN layers. This is the normal mode
+        False: Freeze BN layers. Good when batch size is small
+        True: (don't use). Set layer in training mode even when making inferences
     """
     def call(self, inputs, training=None):
-        """
-        Note about training values:
-            None: Train BN layers. This is the normal mode
-            False: Freeze BN layers. Good when batch size is small
-            True: (don't use). Set layer in training mode even when making inferences
-        """
+        
         return super(self.__class__, self).call(inputs, training=training)
 
 
@@ -96,7 +92,7 @@ def compute_backbone_shapes(config, image_shape):
 
 
 ############################################################
-#  Resnet Graph
+#  Resnet Blocks
 ############################################################
 
 # Code adopted from:
@@ -104,8 +100,9 @@ def compute_backbone_shapes(config, image_shape):
 
 def identity_block(input_tensor, kernel_size, filters, stage, block,
                    use_bias=True, train_bn=True):
-    """The identity_block is the block that has no conv layer at shortcut
-    # Arguments
+    """The identity_block does not have a conv layer in the shortcut.
+
+    Args:
         input_tensor: input tensor
         kernel_size: default 3, the kernel size of middle conv layer at main path
         filters: list of integers, the nb_filters of 3 conv layer at main path
@@ -139,8 +136,9 @@ def identity_block(input_tensor, kernel_size, filters, stage, block,
 
 def conv_block(input_tensor, kernel_size, filters, stage, block,
                strides=(2, 2), use_bias=True, train_bn=True):
-    """conv_block is the block that has a conv layer at shortcut
-    # Arguments
+    """The conv_block has a conv layer in the shortcut.
+
+    Args:
         input_tensor: input tensor
         kernel_size: default 3, the kernel size of middle conv layer at main path
         filters: list of integers, the nb_filters of 3 conv layer at main path
@@ -148,7 +146,8 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
         block: 'a','b'..., current block label, used for generating layer names
         use_bias: Boolean. To use or not use a bias in conv layers.
         train_bn: Boolean. Train or freeze Batch Norm layers
-    Note that from stage 3, the first conv layer at main path is with subsample=(2,2)
+
+    Note: From stage 3, the first conv layer at main path is with subsample=(2,2)
     And the shortcut should have subsample=(2,2) as well
     """
     nb_filter1, nb_filter2, nb_filter3 = filters
@@ -177,35 +176,88 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
     x = KL.Activation('relu', name='res' + str(stage) + block + '_out')(x)
     return x
 
+def preactivated_conv_block(input_tensor, kernel_size, filters, stage, block,
+               strides=(2, 2), use_bias=True, train_bn=True):
+    """The preactivated_conv_block has the Batchnorm and activation layer before 
+    the conv layer. This is called full pre-activation and is based off of 
+    Identity Mappings in Deep Residual Networks by Kaiming He et al. 
+    The shortcut has a conv layer with subsample.
 
-def resnet_graph(input_image, architecture, stage5=False, train_bn=True):
-    """Build a ResNet graph.
-        architecture: Can be resnet50 or resnet101
+    Args:
+        input_tensor: input tensor
+        kernel_size: default 3, the kernel size of middle conv layer at main path
+        filters: list of integers, the nb_filters of 3 conv layer at main path
+        stage: integer, current stage label, used for generating layer names
+        block: 'a','b'..., current block label, used for generating layer names
+        use_bias: Boolean. To use or not use a bias in conv layers.
+        train_bn: Boolean. Train or freeze Batch Norm layers
+
+    Note: From stage 3, the first conv layer at main path is with subsample=(2,2)
+    And the shortcut should have subsample=(2,2) as well
+    """
+    nb_filter1, nb_filter2, nb_filter3 = filters
+    conv_name_base = 'res' + str(stage) + block + '_branch'
+    bn_name_base = 'bn' + str(stage) + block + '_branch'
+
+    x = BatchNorm(name=bn_name_base + '2a')(input_tensor, training=train_bn)
+    x = KL.Activation('relu')(x)
+    x = KL.Conv2D(nb_filter1, (1, 1), strides=strides,
+                  name=conv_name_base + '2a', use_bias=use_bias)(x)
+    
+    x = BatchNorm(name=bn_name_base + '2b')(x, training=train_bn)
+    x = KL.Activation('relu')(x)
+    x = KL.Conv2D(nb_filter2, (kernel_size, kernel_size), padding='same',
+                  name=conv_name_base + '2b', use_bias=use_bias)(x)
+
+    x = BatchNorm(name=bn_name_base + '2c')(x, training=train_bn)
+    x = KL.Activation('relu')(x)
+    x = KL.Conv2D(nb_filter3, (1, 1), name=conv_name_base +
+                  '2c', use_bias=use_bias)(x)
+
+    shortcut = BatchNorm(name=bn_name_base + '1')(shortcut, training=train_bn)
+    shortcut = KL.Conv2D(nb_filter3, (1, 1), strides=strides,
+                         name=conv_name_base + '1', use_bias=use_bias)(input_tensor)
+
+    x = KL.Add()([x, shortcut])
+    x = KL.Activation('relu', name='res' + str(stage) + block + '_out')(x)
+    return x
+
+
+def resnet_model(input_image, architecture, stage5=False, train_bn=True):
+    """Builds a ResNet model.
+
+    Args:
+        architecture: Either resnet50 or resnet101
         stage5: Boolean. If False, stage5 of the network is not created
         train_bn: Boolean. Train or freeze Batch Norm layers
     """
     assert architecture in ["resnet50", "resnet101"]
+
     # Stage 1
     x = KL.ZeroPadding2D((3, 3))(input_image)
     x = KL.Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)
     x = BatchNorm(name='bn_conv1')(x, training=train_bn)
     x = KL.Activation('relu')(x)
     C1 = x = KL.MaxPooling2D((3, 3), strides=(2, 2), padding="same")(x)
+
     # Stage 2
     x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1), train_bn=train_bn)
     x = identity_block(x, 3, [64, 64, 256], stage=2, block='b', train_bn=train_bn)
     C2 = x = identity_block(x, 3, [64, 64, 256], stage=2, block='c', train_bn=train_bn)
+
     # Stage 3
     x = conv_block(x, 3, [128, 128, 512], stage=3, block='a', train_bn=train_bn)
     x = identity_block(x, 3, [128, 128, 512], stage=3, block='b', train_bn=train_bn)
     x = identity_block(x, 3, [128, 128, 512], stage=3, block='c', train_bn=train_bn)
     C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d', train_bn=train_bn)
+
     # Stage 4
     x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a', train_bn=train_bn)
     block_count = {"resnet50": 5, "resnet101": 22}[architecture]
     for i in range(block_count):
         x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i), train_bn=train_bn)
     C4 = x
+
     # Stage 5
     if stage5:
         x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a', train_bn=train_bn)
@@ -221,9 +273,11 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True):
 ############################################################
 
 def apply_box_deltas_graph(boxes, deltas):
-    """Applies the given deltas to the given boxes.
-    boxes: [N, (y1, x1, y2, x2)] boxes to update
-    deltas: [N, (dy, dx, log(dh), log(dw))] refinements to apply
+    """Applies the given refinement deltas to the respective bounding boxes.
+    
+    Args:
+        boxes: [N, (y1, x1, y2, x2)] boxes to update
+        deltas: [N, (dy, dx, log(dh), log(dw))] refinements to apply
     """
     # Convert to y, x, h, w
     height = boxes[:, 2] - boxes[:, 0]
@@ -245,9 +299,11 @@ def apply_box_deltas_graph(boxes, deltas):
 
 
 def clip_boxes_graph(boxes, window):
-    """
-    boxes: [N, (y1, x1, y2, x2)]
-    window: [4] in the form y1, x1, y2, x2
+    """Clips the bounding boxes.
+
+    Args:
+        boxes: [N, (y1, x1, y2, x2)]
+        window: [4] in the form y1, x1, y2, x2
     """
     # Split
     wy1, wx1, wy2, wx2 = tf.split(window, 4)
@@ -1907,7 +1963,7 @@ class MaskRCNN():
             _, C2, C3, C4, C5 = config.BACKBONE(input_image, stage5=True,
                                                 train_bn=config.TRAIN_BN)
         else:
-            _, C2, C3, C4, C5 = resnet_graph(input_image, config.BACKBONE,
+            _, C2, C3, C4, C5 = resnet_model(input_image, config.BACKBONE,
                                              stage5=True, train_bn=config.TRAIN_BN)
         # Top-down Layers
         # TODO: add assert to verify feature map sizes match what's in config
