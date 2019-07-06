@@ -15,7 +15,7 @@
 """Masked R-CNN compatible with TF 2.0.
 
 Reference:
-[Mask R-CNN](https://arxiv.org/abs/1703.06870)
+[Mask R-CNN](https://arxiv.org/asb/1703.06870)
 
 Adapted from:
 [Matterport - Mask_RCNN](https://github.com/matterport/Mask_RCNN)
@@ -403,28 +403,28 @@ class ProposalLayer(KL.Layer):
 ############################################################
 
 def log2_graph(x):
-    """Implementation of Log2. TF doesn't have a native implementation."""
+    """Implementation of Log2. There is no native implementation."""
     return tf.math.log(x) / tf.math.log(2.0)
 
 
 class PyramidROIAlign(KL.Layer):
     """Implements ROI Pooling on multiple levels of the feature pyramid.
 
-    Params:
-    - pool_shape: [pool_height, pool_width] of the output pooled regions. Usually [7, 7]
+    Args:
+        pool_shape: [pool_height, pool_width] of the output pooled regions. Usually [7, 7]
 
     Inputs:
-    - boxes: [batch, num_boxes, (y1, x1, y2, x2)] in normalized
-             coordinates. Possibly padded with zeros if not enough
-             boxes to fill the array.
-    - image_meta: [batch, (meta data)] Image details. See compose_image_meta()
-    - feature_maps: List of feature maps from different levels of the pyramid.
+        boxes: [batch, num_boxes, (y1, x1, y2, x2)] in normalized
+            coordinates. Possibly padded with zeros if not enough
+            boxes to fill the array.
+        image_meta: [batch, (meta data)] Image details. See compose_image_meta()
+        feature_maps: List of feature maps from different levels of the pyramid.
                     Each is [batch, height, width, channels]
 
     Output:
-    Pooled regions in the shape: [batch, num_boxes, pool_height, pool_width, channels].
-    The width and height are those specific in the pool_shape in the layer
-    constructor.
+        Pooled regions in the shape: [batch, num_boxes, pool_height, pool_width, channels].
+        The width and height are those specific in the pool_shape in the layer
+        constructor.
     """
 
     def __init__(self, pool_shape, **kwargs):
@@ -553,20 +553,19 @@ def detection_targets_graph(proposals, gt_class_ids, gt_boxes, gt_masks, config)
     """Generates detection targets for one image. Subsamples proposals and
     generates target class IDs, bounding box deltas, and masks for each.
 
-    Inputs:
-    proposals: [POST_NMS_ROIS_TRAINING, (y1, x1, y2, x2)] in normalized coordinates. Might
-               be zero padded if there are not enough proposals.
-    gt_class_ids: [MAX_GT_INSTANCES] int class IDs
-    gt_boxes: [MAX_GT_INSTANCES, (y1, x1, y2, x2)] in normalized coordinates.
-    gt_masks: [height, width, MAX_GT_INSTANCES] of boolean type.
+    Args:
+        proposals: [POST_NMS_ROIS_TRAINING, (y1, x1, y2, x2)] in normalized coordinates. Might
+                   be zero padded if there are not enough proposals.
+        gt_class_ids: [MAX_GT_INSTANCES] int class IDs
+        gt_boxes: [MAX_GT_INSTANCES, (y1, x1, y2, x2)] in normalized coordinates.
+        gt_masks: [height, width, MAX_GT_INSTANCES] of boolean type.
 
-    Returns: Target ROIs and corresponding class IDs, bounding box shifts,
-    and masks.
-    rois: [TRAIN_ROIS_PER_IMAGE, (y1, x1, y2, x2)] in normalized coordinates
-    class_ids: [TRAIN_ROIS_PER_IMAGE]. Integer class IDs. Zero padded.
-    deltas: [TRAIN_ROIS_PER_IMAGE, (dy, dx, log(dh), log(dw))]
-    masks: [TRAIN_ROIS_PER_IMAGE, height, width]. Masks cropped to bbox
-           boundaries and resized to neural network output size.
+    Returns: Target ROIs and corresponding class IDs, bounding box shifts and masks.
+        rois: [TRAIN_ROIS_PER_IMAGE, (y1, x1, y2, x2)] in normalized coordinates
+        class_ids: [TRAIN_ROIS_PER_IMAGE]. Integer class IDs. Zero padded.
+        deltas: [TRAIN_ROIS_PER_IMAGE, (dy, dx, log(dh), log(dw))]
+        masks: [TRAIN_ROIS_PER_IMAGE, height, width]. Masks cropped to bbox
+               boundaries and resized to neural network output size.
 
     Note: Returned arrays might be zero padded if not enough target ROIs.
     """
@@ -690,22 +689,21 @@ class DetectionTargetLayer(KL.Layer):
     and masks for each.
 
     Inputs:
-    proposals: [batch, N, (y1, x1, y2, x2)] in normalized coordinates. Might
-               be zero padded if there are not enough proposals.
-    gt_class_ids: [batch, MAX_GT_INSTANCES] Integer class IDs.
-    gt_boxes: [batch, MAX_GT_INSTANCES, (y1, x1, y2, x2)] in normalized
-              coordinates.
-    gt_masks: [batch, height, width, MAX_GT_INSTANCES] of boolean type
+        proposals: [batch, N, (y1, x1, y2, x2)] in normalized coordinates. Might
+                   be zero padded if there are not enough proposals.
+        gt_class_ids: [batch, MAX_GT_INSTANCES] Integer class IDs.
+        gt_boxes: [batch, MAX_GT_INSTANCES, (y1, x1, y2, x2)] in normalized
+                  coordinates.
+        gt_masks: [batch, height, width, MAX_GT_INSTANCES] of boolean type
 
-    Returns: Target ROIs and corresponding class IDs, bounding box shifts,
-    and masks.
-    rois: [batch, TRAIN_ROIS_PER_IMAGE, (y1, x1, y2, x2)] in normalized
-          coordinates
-    target_class_ids: [batch, TRAIN_ROIS_PER_IMAGE]. Integer class IDs.
-    target_deltas: [batch, TRAIN_ROIS_PER_IMAGE, (dy, dx, log(dh), log(dw)]
-    target_mask: [batch, TRAIN_ROIS_PER_IMAGE, height, width]
-                 Masks cropped to bbox boundaries and resized to neural
-                 network output size.
+    Returns: Target ROIs and corresponding class IDs, bounding box shifts and masks.
+        rois: [batch, TRAIN_ROIS_PER_IMAGE, (y1, x1, y2, x2)] in normalized
+              coordinates
+        target_class_ids: [batch, TRAIN_ROIS_PER_IMAGE]. Integer class IDs.
+        target_deltas: [batch, TRAIN_BNROIS_PER_IMAGE, (dy, dx, log(dh), log(dw)]
+        target_mask: [batch, TRAIN_ROIS_PER_IMAGE, height, width]
+                     Masks cropped to bbox boundaries and resized to neural
+                     network output size.
 
     Note: Returned arrays might be zero padded if not enough target ROIs.
     """
@@ -721,8 +719,7 @@ class DetectionTargetLayer(KL.Layer):
         gt_masks = inputs[3]
 
         # Slice the batch and run a graph for each slice
-        # TODO: Rename target_bbox to target_deltas for clarity
-        names = ["rois", "target_class_ids", "target_bbox", "target_mask"]
+        names = ["rois", "target_class_ids", "target_deltas", "target_mask"]
         outputs = utils.batch_slice(
             [proposals, gt_class_ids, gt_boxes, gt_masks],
             lambda w, x, y, z: detection_targets_graph(
@@ -751,7 +748,7 @@ def refine_detections_graph(rois, probs, deltas, window, config):
     """Refine classified proposals and filter overlaps and return final
     detections.
 
-    Inputs:
+    Args:
         rois: [N, (y1, x1, y2, x2)] in normalized coordinates
         probs: [N, num_classes]. Class probabilities.
         deltas: [N, num_classes, (dy, dx, log(dh), log(dw))]. Class-specific
@@ -2788,15 +2785,16 @@ def compose_image_meta(image_id, original_image_shape, image_shape,
                        window, scale, active_class_ids):
     """Takes attributes of an image and puts them in one 1D array.
 
-    image_id: An int ID of the image. Useful for debugging.
-    original_image_shape: [H, W, C] before resizing or padding.
-    image_shape: [H, W, C] after resizing and padding
-    window: (y1, x1, y2, x2) in pixels. The area of the image where the real
-            image is (excluding the padding)
-    scale: The scaling factor applied to the original image (float32)
-    active_class_ids: List of class_ids available in the dataset from which
-        the image came. Useful if training on images from multiple datasets
-        where not all classes are present in all datasets.
+    Args:
+        image_id: An int ID of the image. Useful for debugging.
+        original_image_shape: [H, W, C] before resizing or padding.
+        image_shape: [H, W, C] after resizing and padding
+        window: (y1, x1, y2, x2) in pixels. The area of the image where the real
+                image is (excluding the padding)
+        scale: The scaling factor applied to the original image (float32)
+        active_class_ids: List of class_ids available in the dataset from which
+            the image came. Useful if training on images from multiple datasets
+            where not all classes are present in all datasets.
     """
     meta = np.array(
         [image_id] +                  # size=1
