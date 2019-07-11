@@ -4,14 +4,23 @@
 #### Architecture
 - Stage 1
 	- Text Encoder Network
-	- Conditional Augmentation Network
+		- Text description to a 1024 dimensional text embedding
+		- Learning Deep Representations of Fine-Grained Visual Descriptions [Arxiv](https://arxiv.org/abs/1605.05395)
+	- Conditioning Augmentation Network
+		- Adds randomness to the network
+		- Produces more image-text pairs
 	- Generator Network
 	- Discriminator Network
-	- Adversarial Model
+	- Embedding Compressor Network
+	- Outputs a 64x64 image
 #
 - Stage 2
+	- Text Encoder Network
+	- Conditioning Augmentation Network
 	- Generator Network
 	- Discriminator Network
+	- Embedding Compressor Network
+	- Outputs a 256x256 image
 ---
 #### Checklist
 - `tf.keras` with `tf.GradientTape()` training
