@@ -28,6 +28,6 @@
 - Distributed training (Mirrored Strategy)
 - Evaluation and Tensorboard usage
 - Pre-Trained Resnet
-- CUB Dataset (11,788 images with 200 classes) with `TFRecords` and `tf.data.Dataset`
+- CUB Dataset (11,788 images with 200 classes) with ImageDataGenerator
 - Custom loss functions
 - Export model ~ No Subclassing

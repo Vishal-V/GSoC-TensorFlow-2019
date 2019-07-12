@@ -111,6 +111,15 @@ def build_stage1_generator():
 ############################################################	
 
 def ConvBlock(x, num_kernels):
+	"""A ConvBlock with a Conv2D, BatchNormalization and LeakyRelu activation.
+
+	Args:
+		x: The preceding layer as input.
+		num_kernels: Number of kernels for the Conv2D layer.
+
+	Returns:
+		x: The final activation layer after the ConvBlock block.
+	"""
 	x = Conv2D(num_kernels, kernel_size=(4,4), padding='same', strides=2, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = LeakyRelu(alpha=0.2)(x)
@@ -118,6 +127,10 @@ def ConvBlock(x, num_kernels):
 
 def build_stage1_discriminator():
 	"""Builds the Stage 1 Discriminator that uses the 64x64 resolution images from the generator
+	and the compressed and spatially replicated embedding.
+
+	Returns:
+		Stage 1 Discriminator Model.
 	"""
 	input_layer1 = Input(shape=(64, 64, 3))
 
@@ -144,3 +157,41 @@ def build_stage1_discriminator():
 	stage1_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x1])
 	return stage1_dis
 
+
+############################################################
+# Adversarial Model
+############################################################
+
+def build_adversarial(generator_model, discriminator_model):
+	"""Adversarial model for stage 1
+
+	Args:
+		generator_model: Stage 1 Generator Model
+		discriminator_model: Stage 1 Discriminator Model
+
+	Returns:
+		Stage 1 Adversarial Model
+	"""
+	input_layer1 = Input(shape=(1024,))
+	input_layer2 = Input(shape=(100,))
+	input_layer3 = Input(shape=(4, 4, 128))
+
+	x, ca = generator_model([input_layer1, input_layer2])
+
+	discriminator_model.trainable = False
+
+	probabilities = discriminator_model([x, input_layer3])
+
+	adversarial_model = Model(inputs=[input_layer1, input_layer2, input_layer3], outputs=[probabilities, ca])
+	return adversarial_model
+
+
+############################################################
+# Stage 2 Generator Network
+############################################################
+
+# TODO: Text Encoder
+# TODO: Conditioning Augmentation
+# TODO: Downsampling Block
+# TODO: Residual Block (learn a multimodal distribution)
+# TODO: Upsampling Block
