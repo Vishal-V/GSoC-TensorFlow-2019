@@ -1,3 +1,20 @@
+# Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""StackGAN.
+"""
+
 import os
 import pickle
 import random
@@ -39,19 +56,6 @@ def conditioning_augmentation(x):
 	epsilon = K.random_normal(shape=K.constant((mean.shape[1], ), dtype='int32'))
 	c = mean + stddev * epsilon
 	return c
-
-def build_ca_model():
-	"""Builds a conditioning augmentation network.
-
-	Returns: 
-		Model with input_layer as input and text conditioning variable as output.
-	"""
-	input_layer = Input(shape=(1024,))
-	x = Dense(256)(input_layer)
-	x = LeakyRelu(alpha=0.2)(x)
-
-	c = lambda(conditioning_augmentation)(x)
-	return Model(inputs=[input_layer], outputs=[c])
 
 
 ############################################################
@@ -110,7 +114,7 @@ def build_stage1_generator():
 # Stage 1 Discriminator Network
 ############################################################	
 
-def ConvBlock(x, num_kernels):
+def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
 	"""A ConvBlock with a Conv2D, BatchNormalization and LeakyRelu activation.
 
 	Args:
@@ -120,9 +124,11 @@ def ConvBlock(x, num_kernels):
 	Returns:
 		x: The final activation layer after the ConvBlock block.
 	"""
-	x = Conv2D(num_kernels, kernel_size=(4,4), padding='same', strides=2, use_bias=False)(x)
+	x = Conv2D(num_kernels, kernel_size=kernel_size, padding='same', strides=strides, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = LeakyRelu(alpha=0.2)(x)
+	
+	if activation:
+		x = LeakyRelu(alpha=0.2)(x)
 	return x
 
 def build_stage1_discriminator():
@@ -149,50 +155,28 @@ def build_stage1_discriminator():
 	x1 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x1 = LeakyRelu(alpha=0.2)(x)
 
-	# Flatten and add a FC layer
+	# Flatten and add a FC layer to predict.
 	x1 = Flatten()(x1)
 	x1 = Dense(1)(x1)
 	x1 = Activation('sigmoid')(x1)
 
 	stage1_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x1])
 	return stage1_dis
-# Residual Blocks
-	x = ZeroPadding2D(padding=(1,1))(concat)
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
-	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
-
-	x = residual_block(x)
-	x = residual_block(x)
-	x = residual_block(x)
-	x = residual_block(x)
-
-	# Upsampling Blocks
-	x = UpSamplingBlock(x, 512)
-	x = UpSamplingBlock(x, 256)
-	x = UpSamplingBlock(x, 128)
-	x = UpSamplingBlock(x, 64)
-
-	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False)(x)
-	x = Activation('tanh')(x)
-
-	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, ca])
-	return stage2_gen
-
+	
 
 ############################################################
 # Adversarial Model
 ############################################################
 
 def build_adversarial(generator_model, discriminator_model):
-	"""Adversarial model for stage 1
+	"""Adversarial model.
 
 	Args:
 		generator_model: Stage 1 Generator Model
 		discriminator_model: Stage 1 Discriminator Model
 
 	Returns:
-		Stage 1 Adversarial Model
+		Adversarial Model.
 	"""
 	input_layer1 = Input(shape=(1024,))
 	input_layer2 = Input(shape=(100,))
@@ -216,10 +200,10 @@ def concat_along_dims(inputs):
 	"""Joins the conditioned text with the encoded image along the dimensions.
 
 	Args:
-		inputs: consisting of conditioned text and encoded images as [c,x]
+		inputs: consisting of conditioned text and encoded images as [c,x].
 
 	Returns:
-		Joint block along the dimensions
+		Joint block along the dimensions.
 	"""
 	c = inputs[0]
 	x = inputs[1]
@@ -303,4 +287,52 @@ def build_stage2_generator():
 
 	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, ca])
 	return stage2_gen
+
+
+############################################################
+# Stage 2 Discriminator Network
+############################################################
+
+def build_stage2_discriminator():
+	"""Builds the Stage 2 Discriminator that uses the 256x256 resolution images from the generator
+	and the compressed and spatially replicated embeddings.
+
+	Returns:
+		Stage 2 Discriminator Model for StackGAN.
+	"""
+	input_layer1 = Input(shape=(256, 256, 3))
+
+	x = Conv2D(64, kernel_size=(4,4), padding='same', strides=2, use_bias=False)(input_layer1)
+	x = LeakyRelu(alpha=0.2)(x)
+
+	x = ConvBlock(x, 128)
+	x = ConvBlock(x, 256)
+	x = ConvBlock(x, 512)
+	x = ConvBlock(x, 1024)
+	x = ConvBlock(x, 2048)
+	x = ConvBlock(x, 1024, (1,1), 1)
+	x = ConvBlock(x, 512, (1,1), 1, False)
+
+	x1 = ConvBlock(x, 128, (1,1), 1)
+	x1 = ConvBlock(x1, 128, (3,3), 1)
+	x1 = ConvBlock(x1, 128, (3,3), 1, False)
+
+	x2 = add([x, x1])
+	x2 = LeakyRelu(alpha=0.2)(x2)
+
+	# Concatenate compressed and spatially replicated embedding
+	input_layer2 = Input(shape=(4, 4, 128))
+	concat = concatenate([x2, input_layer2])
+
+	x3 = Conv2D(512, kernel_size=(1,1), strides=1, padding='same')(concat)
+	x3 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x3)
+	x3 = LeakyRelu(alpha=0.2)(x3)
+
+	# Flatten and add a FC layer
+	x3 = Flatten()(x3)
+	x3 = Dense(1)(x3)
+	x3 = Activation('sigmoid')(x3)
+
+	stage2_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x3])
+	return stage2_dis
 
