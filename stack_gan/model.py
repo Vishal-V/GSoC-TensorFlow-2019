@@ -69,7 +69,7 @@ def UpSamplingBlock(x, num_kernels):
 		x: The final activation layer after the Upsampling block.
 	"""
 	x = UpSampling2D(size=(2,2))(x)
-	x = Conv2D(num_kernels, kernel_size=3, padding='same', strides=1, use_bias=False)(x)
+	x = Conv2D(num_kernels, kernel_size=(3,3), padding='same', strides=1, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = Relu()(x)
 	return x
@@ -78,7 +78,7 @@ def build_stage1_generator():
 	"""Build the Stage 1 Generator Network using the conditioning text and latent space
 
 	Returns:
-		Stage 1 Generator Model
+		Stage 1 Generator Model for StackGAN.
 	"""
 	input_layer1 = Input(shape=(1024,))
 	ca = Dense(256)(input_layer1)
@@ -130,7 +130,7 @@ def build_stage1_discriminator():
 	and the compressed and spatially replicated embedding.
 
 	Returns:
-		Stage 1 Discriminator Model.
+		Stage 1 Discriminator Model for StackGAN.
 	"""
 	input_layer1 = Input(shape=(64, 64, 3))
 
@@ -156,6 +156,28 @@ def build_stage1_discriminator():
 
 	stage1_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x1])
 	return stage1_dis
+# Residual Blocks
+	x = ZeroPadding2D(padding=(1,1))(concat)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	x = Relu()(x)
+
+	x = residual_block(x)
+	x = residual_block(x)
+	x = residual_block(x)
+	x = residual_block(x)
+
+	# Upsampling Blocks
+	x = UpSamplingBlock(x, 512)
+	x = UpSamplingBlock(x, 256)
+	x = UpSamplingBlock(x, 128)
+	x = UpSamplingBlock(x, 64)
+
+	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = Activation('tanh')(x)
+
+	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, ca])
+	return stage2_gen
 
 
 ############################################################
@@ -190,8 +212,95 @@ def build_adversarial(generator_model, discriminator_model):
 # Stage 2 Generator Network
 ############################################################
 
-# TODO: Text Encoder
-# TODO: Conditioning Augmentation
-# TODO: Downsampling Block
-# TODO: Residual Block (learn a multimodal distribution)
-# TODO: Upsampling Block
+def concat_along_dims(inputs):
+	"""Joins the conditioned text with the encoded image along the dimensions.
+
+	Args:
+		inputs: consisting of conditioned text and encoded images as [c,x]
+
+	Returns:
+		Joint block along the dimensions
+	"""
+	c = inputs[0]
+	x = inputs[1]
+
+	c = K.expand_dims(c, axis=1)
+	c = K.tile(c, [1, 16, 16, 1])
+	return K.concatenate([c, x], axis = 3)
+
+def residual_block(inputs):
+	"""Residual block with plain identity connections.
+
+	Args:
+		inputs: input layer or an encoded layer
+
+	Returns:
+		Layer with computed identity mapping.
+	"""
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	x = Relu()(x)
+	
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	
+	x = add([x, inputs])
+	x = Relu()(x)
+
+	return x
+
+def build_stage2_generator():
+	"""Build the Stage 2 Generator Network using the conditioning text and images from stage 1.
+
+	Returns:
+		Stage 2 Generator Model for StackGAN.
+	"""
+	input_layer1 = Input(shape=(1024,))
+	input_images = Input(shape=(64, 64, 3))
+
+	# Conditioning Augmentation
+	ca = Dense(256)(input_layer1)
+	ca = LeakyRelu(alpha=0.2)(ca)
+	c = lambda(conditioning_augmentation)(ca)
+
+	# Downsampling block
+	x = ZeroPadding2D(padding=(1,1))(input_images)
+	x = Conv2D(128, kernel_size=(3,3), strides=1, use_bias=False)(x)
+	x = Relu()(x)
+
+	x = ZeroPadding2D(padding=(1,1))(x)
+	x = Conv2D(256, kernel_size=(4,4), strides=2, use_bias=False)(x)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	x = Relu()(x)
+
+	x = ZeroPadding2D(padding=(1,1))(x)
+	x = Conv2D(512, kernel_size=(4,4), strides=2, use_bias=False)(x)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	x = Relu()(x)
+
+	# Concatenate text conditioning block with the encoded image
+	concat = concat_along_dims([c, x])
+
+	# Residual Blocks
+	x = ZeroPadding2D(padding=(1,1))(concat)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
+	x = Relu()(x)
+
+	x = residual_block(x)
+	x = residual_block(x)
+	x = residual_block(x)
+	x = residual_block(x)
+
+	# Upsampling Blocks
+	x = UpSamplingBlock(x, 512)
+	x = UpSamplingBlock(x, 256)
+	x = UpSamplingBlock(x, 128)
+	x = UpSamplingBlock(x, 64)
+
+	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = Activation('tanh')(x)
+
+	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, ca])
+	return stage2_gen
+
