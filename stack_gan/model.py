@@ -57,6 +57,15 @@ def conditioning_augmentation(x):
 	c = mean + stddev * epsilon
 	return c
 
+def build_ca_network():
+	"""Builds the conditioning augmentation network.
+	"""
+	input_layer1 = Input(shape=(1024,))
+	mls = Dense(256)(input_layer1)
+	mls = LeakyRelu(alpha=0.2)(mls)
+	ca = lambda(conditioning_augmentation)(mls)
+	return Model(inputs=[input_layer1], outputs=[ca])
+
 
 ############################################################
 # Stage 1 Generator Network (CGAN)
@@ -77,6 +86,7 @@ def UpSamplingBlock(x, num_kernels):
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = Relu()(x)
 	return x
+
 
 def build_stage1_generator():
 	"""Build the Stage 1 Generator Network using the conditioning text and latent space
@@ -130,6 +140,18 @@ def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
 	if activation:
 		x = LeakyRelu(alpha=0.2)(x)
 	return x
+
+
+def build_embedding_compressor():
+    """Build embedding compressor model
+    """
+    input_layer1 = Input(shape=(1024,))
+    x = Dense(128)(input_layer1)
+    x = ReLU()(x)
+
+    model = Model(inputs=[input_layer1], outputs=[x])
+    return model
+
 
 def build_stage1_discriminator():
 	"""Builds the Stage 1 Discriminator that uses the 64x64 resolution images from the generator
@@ -209,8 +231,10 @@ def concat_along_dims(inputs):
 	x = inputs[1]
 
 	c = K.expand_dims(c, axis=1)
+	c = K.expand_dims(c, axis=1)
 	c = K.tile(c, [1, 16, 16, 1])
 	return K.concatenate([c, x], axis = 3)
+
 
 def residual_block(inputs):
 	"""Residual block with plain identity connections.
@@ -232,6 +256,7 @@ def residual_block(inputs):
 	x = Relu()(x)
 
 	return x
+
 
 def build_stage2_generator():
 	"""Build the Stage 2 Generator Network using the conditioning text and images from stage 1.
@@ -336,3 +361,65 @@ def build_stage2_discriminator():
 	stage2_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x3])
 	return stage2_dis
 
+############################################################
+# Train Utilities
+############################################################
+
+def checkpoint_prefix():
+	checkpoint_dir = './training_checkpoints'
+	checkpoint_prefix = os.path.join(checkpoint_dir, 'ckpt')
+
+	return checkpoint_prefix
+
+def custom_kl(y_true, y_pred):
+	mean = y_pred[:, :128]
+	ls = y_pred[:, 128:]
+	loss = -ls + 0.5 * (-1 + tf.math.exp(2.0 * ls) + tf.math.square(mean))
+	loss = tf.math.mean(loss)
+	return loss
+
+
+############################################################
+# StackGAN class
+############################################################
+
+# TODO: Stage 1 Gen LR Decay
+class StackGAN(object):
+	"""StackGAN class.
+
+	Args:
+		epochs: Number of epochs
+		z_dim: Latent space dimensions
+		batch_size: Batch Size
+		enable_function: If True, training function is decorated with tf.function
+		stage1_generator_lr: Learning rate for stage 1 generator
+		stage1_discriminator_lr: Learning rate for stage 2 generator
+	"""
+	def __init__(self, epochs=1000, z_dim=100, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
+		self.epochs = epochs
+		self.z_dim = z_dim
+		self.enable_function = enable_function
+		self.stage1_generator_lr = stage1_generator_lr
+		self.stage1_discriminator_lr = stage1_discriminator_lr
+		self.image_size = 64
+		self.conditioning_dim = 128
+		self.batch_size = batch_size
+		self.stage1_generator_optimizer = Adam(lr=stage1_generator_lr, beta_1=0.5, beta_2=0.999)
+		self.stage1_discriminator_optimizer = Adam(lr=stage1_discriminator_lr, beta_1=0.5, beta_2=0.999)
+		self.stage1_generator = build_stage1_generator()
+		self.stage1_generator.compile(loss='mse', optimizer=stage1_generator_optimizer)
+		self.stage1_discriminator = build_stage1_discriminator()
+		self.stage1_discriminator.compile(loss='binary_crossentropy', optimizer=stage1_discriminator_optimizer)
+		self.ca_network = build_ca_network()
+		self.ca_network.compile(loss='binary_crossentropy', optimizer='Adam')
+		self.embedding_compressor = build_embedding_compressor()
+		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
+		self.stage1_adversarial = build_adversarial()
+		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'custom_kl'], loss_weights=[1, 2.0], optimizer=stage1_generator_optimizer)
+		self.checkpoint1 = tf.train.Checkpoint(
+        	generator_optimizer=self.stage1_generator_optimizer,
+        	discriminator_optimizer=self.stage1_discriminator_optimizer,
+        	generator=self.stage1_generator,
+        	discriminator=self.stage1_discriminator)
+
+		

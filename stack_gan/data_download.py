@@ -39,7 +39,7 @@ def download_data(download_path):
 
 	return path_to_folder
 
-download_data(args['download_path'])
+download_data(args["download_path"])
 
 # TODO: Download the Char-CNN-RNN embeddings
-embed_url = "https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE"
+embedings_url = "https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE"
