@@ -87,7 +87,6 @@ def UpSamplingBlock(x, num_kernels):
 	x = Relu()(x)
 	return x
 
-
 def build_stage1_generator():
 	"""Build the Stage 1 Generator Network using the conditioning text and latent space
 
@@ -141,7 +140,6 @@ def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
 		x = LeakyRelu(alpha=0.2)(x)
 	return x
 
-
 def build_embedding_compressor():
     """Build embedding compressor model
     """
@@ -151,7 +149,6 @@ def build_embedding_compressor():
 
     model = Model(inputs=[input_layer1], outputs=[x])
     return model
-
 
 def build_stage1_discriminator():
 	"""Builds the Stage 1 Discriminator that uses the 64x64 resolution images from the generator
@@ -235,7 +232,6 @@ def concat_along_dims(inputs):
 	c = K.tile(c, [1, 16, 16, 1])
 	return K.concatenate([c, x], axis = 3)
 
-
 def residual_block(inputs):
 	"""Residual block with plain identity connections.
 
@@ -256,7 +252,6 @@ def residual_block(inputs):
 	x = Relu()(x)
 
 	return x
-
 
 def build_stage2_generator():
 	"""Build the Stage 2 Generator Network using the conditioning text and images from stage 1.
@@ -371,12 +366,20 @@ def checkpoint_prefix():
 
 	return checkpoint_prefix
 
-def custom_kl(y_true, y_pred):
+def adversarial_loss(y_true, y_pred):
 	mean = y_pred[:, :128]
 	ls = y_pred[:, 128:]
 	loss = -ls + 0.5 * (-1 + tf.math.exp(2.0 * ls) + tf.math.square(mean))
 	loss = tf.math.mean(loss)
 	return loss
+
+def load_data():
+	# TODO: load the data and labels from the CUB birds folder
+	x = []
+	y = []
+	embeds = []
+
+	return x, y, embeds
 
 
 ############################################################
@@ -384,8 +387,8 @@ def custom_kl(y_true, y_pred):
 ############################################################
 
 # TODO: Stage 1 Gen LR Decay
-class StackGAN(object):
-	"""StackGAN class.
+class StackGanStage1(object):
+	"""StackGAN Stage 1 class.
 
 	Args:
 		epochs: Number of epochs
@@ -415,11 +418,39 @@ class StackGAN(object):
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
 		self.stage1_adversarial = build_adversarial()
-		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'custom_kl'], loss_weights=[1, 2.0], optimizer=stage1_generator_optimizer)
+		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=stage1_generator_optimizer)
 		self.checkpoint1 = tf.train.Checkpoint(
         	generator_optimizer=self.stage1_generator_optimizer,
         	discriminator_optimizer=self.stage1_discriminator_optimizer,
         	generator=self.stage1_generator,
         	discriminator=self.stage1_discriminator)
 
-		
+	def visualize():
+		"""Only for testing
+		"""
+		tb = TensorBoard(log_dir="logs/".format(time.time()))
+	    tb.set_model(self.stage1_generator)
+	    tb.set_model(self.stage1_discriminator)
+	    tb.set_model(self.ca_network)
+	    tb.set_model(self.embedding_compressor)
+
+	def train_stage1():
+		"""Trains the stage1 StackGAN.
+		"""
+
+		x_train, y_train, train_embeds = load_data()
+		x_test, y_test, test_embeds = load_data()
+
+		real = np.ones((self.batch_size, 1), dtype='float') * 0.9
+		fake = np.zeros((self.batch_size, 1), dtype='float') * 0.1
+
+		for epoch in range(self.epochs):
+			print(f'Epoch: {epoch}')
+ 
+         	gen_loss = []
+        	dis_loss = []
+
+        	num_batches = x_train[0] / self.batch_size
+
+        	for i in range(num_batches):
+        		print(f'Batch: {i+1}')
