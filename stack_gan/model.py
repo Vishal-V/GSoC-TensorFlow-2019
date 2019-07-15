@@ -454,3 +454,13 @@ class StackGanStage1(object):
 
         	for i in range(num_batches):
         		print(f'Batch: {i+1}')
+
+        		latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
+        		embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
+        		compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
+
+        		g_loss = self.stage1_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
+        			[K.ones((batch_size, 1)) * 0.9, K.ones((batch_size, 256)) * 0.9])
+
+            	print(f'Generator Loss:{g_loss}')
+            	gen_loss.append(g_loss)
