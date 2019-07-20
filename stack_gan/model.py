@@ -458,9 +458,34 @@ class StackGanStage1(object):
         		latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
         		embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
         		compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
+        		
+        		# Compress and spatially replicate the embedding
+        		compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, 128))
+        		compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
 
+        		image_batch = x_train[i * self.batch_size:(i+1) * self.batch_size]
+        		image_batch = (image_batch - 127.5) / 127.5
+
+        		fake, _ = self.stage1_generator.predict([embedding_text, latent_space])
+
+        		# TODO: Image Labels, Gen Images, Gen Labels
+        		discriminator_loss = self.stage1_discriminator.train_on_batch([image_batch, compressed_embedding], 
+        			np.reshape(image_labels, (self.batch_size, 1)))
+
+        		discriminator_loss_gen = self.build_stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
+        			np.reshape(gen_labels, (self.batch_size, 1)))
+
+        		# TODO: Train on wrong images
+
+        		# Discriminator loss
+        		d_loss = 0.5 * np.add(discriminator_loss, discriminator_loss_gen)
+        		dis_loss.apend(d_loss)
+
+        		print(f'Discriminator Loss: {d_loss}')
+
+        		# Generator loss
         		g_loss = self.stage1_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
         			[K.ones((batch_size, 1)) * 0.9, K.ones((batch_size, 256)) * 0.9])
 
-            	print(f'Generator Loss:{g_loss}')
+            	print(f'Generator Loss: {g_loss}')
             	gen_loss.append(g_loss)
