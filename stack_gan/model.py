@@ -373,8 +373,23 @@ def adversarial_loss(y_true, y_pred):
 	loss = tf.math.mean(loss)
 	return loss
 
+def normalize(input_image, real_image):
+	input_image = (input_image / 127.5) - 1
+	real_image = (real_image / 127.5) - 1
+
+	return input_image, real_image
+
+# TODO: Load class IDs from the pickle file
+def load_class_ids()
+
+# TODO: Load text embeddings
+def load_text_embeddings()
+
+# TODO: Load Images
+def load_images()
+
+# TODO: load the data and labels from the CUB birds folder
 def load_data():
-	# TODO: load the data and labels from the CUB birds folder
 	x = []
 	y = []
 	embeds = []
@@ -466,19 +481,19 @@ class StackGanStage1(object):
         		image_batch = x_train[i * self.batch_size:(i+1) * self.batch_size]
         		image_batch = (image_batch - 127.5) / 127.5
 
-        		fake, _ = self.stage1_generator.predict([embedding_text, latent_space])
+        		gen_images, _ = self.stage1_generator.predict([embedding_text, latent_space])
 
-        		# TODO: Image Labels, Gen Images, Gen Labels
         		discriminator_loss = self.stage1_discriminator.train_on_batch([image_batch, compressed_embedding], 
-        			np.reshape(image_labels, (self.batch_size, 1)))
+        			np.reshape(real, (self.batch_size, 1)))
 
         		discriminator_loss_gen = self.build_stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
-        			np.reshape(gen_labels, (self.batch_size, 1)))
+        			np.reshape(fake, (self.batch_size, 1)))
 
-        		# TODO: Train on wrong images
+        		discriminator_loss_wrong = self.stage1_discriminator.train_on_batch([gen_images[: self.batch_size-1], compressed_embedding[1:]], 
+        			np.reshape(fake[1:], (self.batch_size-1, 1)))
 
         		# Discriminator loss
-        		d_loss = 0.5 * np.add(discriminator_loss, discriminator_loss_gen)
+        		d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_wrong))
         		dis_loss.apend(d_loss)
 
         		print(f'Discriminator Loss: {d_loss}')
@@ -489,3 +504,10 @@ class StackGanStage1(object):
 
             	print(f'Generator Loss: {g_loss}')
             	gen_loss.append(g_loss)
+
+	# TODO: Stage 2
+	def train_stage2():
+		"""Trains Stage 2 StackGAN.
+		"""
+
+	
