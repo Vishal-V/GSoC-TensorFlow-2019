@@ -184,11 +184,11 @@ def build_stage1_discriminator():
 	
 
 ############################################################
-# Adversarial Model
+# Stage 1 Adversarial Model
 ############################################################
 
 def build_adversarial(generator_model, discriminator_model):
-	"""Adversarial model.
+	"""Stage 1 Adversarial model.
 
 	Args:
 		generator_model: Stage 1 Generator Model
@@ -356,6 +356,37 @@ def build_stage2_discriminator():
 	stage2_dis = Model(inputs=[input_layer1, input_layer2], outputs=[x3])
 	return stage2_dis
 
+
+############################################################
+# Stage 2 Adversarial Model
+############################################################
+
+def stage2_adversarial_network(stage2_disc, stage2_gen, stage1_gen):
+	"""Stage 2 Adversarial Network.
+
+	Args:
+		stage2_disc: Stage 2 Discriminator Model.
+		stage2_gen: Stage 2 Generator Model.
+		stage1_gen: Stage 1 Generator Model.
+
+	Returns:
+		Stage 2 Adversarial network.
+	"""
+	conditioned_embedding = Input(shape=(1024, ))
+	latent_space = Input(shape=(100, ))
+	compressed_replicated = Inpt(shape=(4, 4, 128))
+
+	input_images, ca = stage1_gen([conditioned_embedding, latent_space])
+	stage2_disc.trainable = False
+	stage1_gen.trainable = False
+
+	images, ca2 = stage2_gen([conditioned_embedding, input_images])
+	probability = stage2_disc([images, compressed_replicated])
+
+	return Model(inputs=[conditioned_embedding, latent_space, compressed_replicated],
+		outputs=[probability, ca2])
+
+
 ############################################################
 # Train Utilities
 ############################################################
@@ -380,13 +411,16 @@ def normalize(input_image, real_image):
 	return input_image, real_image
 
 # TODO: Load class IDs from the pickle file
-def load_class_ids()
+def load_class_ids():
+	pass
 
 # TODO: Load text embeddings
-def load_text_embeddings()
+def load_text_embeddings():
+	pass
 
 # TODO: Load Images
-def load_images()
+def load_images():
+	pass
 
 # TODO: load the data and labels from the CUB birds folder
 def load_data():
@@ -395,6 +429,8 @@ def load_data():
 	embeds = []
 
 	return x, y, embeds
+
+# TODO: Instance Normalization
 
 
 ############################################################
@@ -440,8 +476,8 @@ class StackGanStage1(object):
         	generator=self.stage1_generator,
         	discriminator=self.stage1_discriminator)
 
-	def visualize():
-		"""Only for testing
+	def visualize_stage1():
+		"""Running Tensorboard visualizations.
 		"""
 		tb = TensorBoard(log_dir="logs/".format(time.time()))
 	    tb.set_model(self.stage1_generator)
@@ -505,9 +541,21 @@ class StackGanStage1(object):
             	print(f'Generator Loss: {g_loss}')
             	gen_loss.append(g_loss)
 
+            	# TODO: Save Model after ceratin number of epochs are done
+
+	def visualize_stage2():
+		"""Running Tensorboard visualizations.
+		"""
+		tb = TensorBoard(log_dir="logs/".format(time.time()))
+	    tb.set_model(self.stage2_generator)
+	    tb.set_model(self.stage2_discriminator)
+	    
 	# TODO: Stage 2
 	def train_stage2():
 		"""Trains Stage 2 StackGAN.
 		"""
+		x_high_train, y_high_train, high_train_embeds = load_data()
+		x_high_test, y_high_test, high_test_embeds = load_data()
 
-	
+		x_low_train, y_low_train, low_train_embeds = load_data()
+		x_low_test, y_low_test, low_test_embeds = load_data()
