@@ -410,9 +410,14 @@ def normalize(input_image, real_image):
 
 	return input_image, real_image
 
-# TODO: Load class IDs from the pickle file
-def load_class_ids():
-	pass
+def load_class_ids_filenames(class_id_path, filename_path):
+	with open(class_id_path, 'rb') as file:
+		class_id = pickle.load(file, encoding='latin1')
+
+	with open(filename_path, 'rb') as file:
+		filename = pickle.load(file, encoding='latin1')
+
+	return class_id, filename
 
 # TODO: Load text embeddings
 def load_text_embeddings():
@@ -437,7 +442,6 @@ def load_data():
 # StackGAN class
 ############################################################
 
-# TODO: Stage 1 Gen LR Decay
 class StackGanStage1(object):
 	"""StackGAN Stage 1 class.
 
@@ -447,7 +451,7 @@ class StackGanStage1(object):
 		batch_size: Batch Size
 		enable_function: If True, training function is decorated with tf.function
 		stage1_generator_lr: Learning rate for stage 1 generator
-		stage1_discriminator_lr: Learning rate for stage 2 generator
+		stage1_discriminator_lr: Learning rate for stage 1 discriminator
 	"""
 	def __init__(self, epochs=1000, z_dim=100, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
 		self.epochs = epochs
@@ -542,6 +546,49 @@ class StackGanStage1(object):
             	gen_loss.append(g_loss)
 
             	# TODO: Save Model after ceratin number of epochs are done
+
+
+class StackGanStage2(object):
+	"""StackGAN Stage 2 class.
+
+	Args:
+		epochs: Number of epochs
+		z_dim: Latent space dimensions
+		batch_size: Batch Size
+		enable_function: If True, training function is decorated with tf.function
+		stage2_generator_lr: Learning rate for stage 2 generator
+		stage2_discriminator_lr: Learning rate for stage 2 discriminator
+	"""
+	def __init__(self, epochs=1000, z_dim=100, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
+		self.epochs = epochs
+		self.z_dim = z_dim
+		self.enable_function = enable_function
+		self.stage1_generator_lr = stage2_generator_lr
+		self.stage1_discriminator_lr = stage2_discriminator_lr
+		self.low_image_size = 64
+		self.high_image_size = 256
+		self.conditioning_dim = 128
+		self.batch_size = batch_size
+		self.stage2_generator_optimizer = Adam(lr=stage2_generator_lr, beta_1=0.5, beta_2=0.999)
+		self.stage2_discriminator_optimizer = Adam(lr=stage2_discriminator_lr, beta_1=0.5, beta_2=0.999)
+		self.stage1_generator = build_stage1_generator()
+		self.stage1_generator.compile(loss='binary_crossentropy', optimizer=stage2_generator_optimizer)
+		self.stage2_generator = build_stage2_generator()
+		self.stage2_generator.compile(loss='binary_crossentropy', optimizer=stage2_generator_optimizer)
+		self.stage2_discriminator = build_stage2_discriminator()
+		self.stage2_discriminator.compile(loss='binary_crossentropy', optimizer=stage2_discriminator_optimizer)
+		self.ca_network = build_ca_network()
+		self.ca_network.compile(loss='binary_crossentropy', optimizer='Adam')
+		self.embedding_compressor = build_embedding_compressor()
+		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
+		self.stage2_adversarial = build_adversarial()
+		self.stage2_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=stage2_generator_optimizer)	
+		self.checkpoint2 = tf.train.Checkpoint(
+        	generator_optimizer=self.stage2_generator_optimizer,
+        	discriminator_optimizer=self.stage2_discriminator_optimizer,
+        	generator=self.stage2_generator,
+        	discriminator=self.stage2_discriminator,
+        	generator1=self.stage1_generator)
 
 	def visualize_stage2():
 		"""Running Tensorboard visualizations.
