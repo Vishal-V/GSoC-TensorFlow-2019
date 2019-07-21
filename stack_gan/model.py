@@ -419,9 +419,12 @@ def load_class_ids_filenames(class_id_path, filename_path):
 
 	return class_id, filename
 
-# TODO: Load text embeddings
-def load_text_embeddings():
-	pass
+def load_text_embeddings(text_embeddings):
+	with open(text_embeddings, 'rb') as file:
+		embeds = pickle.load(file, encoding='latin1')
+		embeds = np.array(embeds)
+
+	return embeds
 
 # TODO: Load Images
 def load_images():
@@ -513,8 +516,6 @@ class StackGanStage1(object):
         		latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
         		embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
         		compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
-        		
-        		# Compress and spatially replicate the embedding
         		compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, 128))
         		compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
 
@@ -545,7 +546,7 @@ class StackGanStage1(object):
             	print(f'Generator Loss: {g_loss}')
             	gen_loss.append(g_loss)
 
-            	# TODO: Save Model after ceratin number of epochs are done
+            	# TODO: Save Model after certain number of epochs are done
 
 
 class StackGanStage2(object):
@@ -606,3 +607,50 @@ class StackGanStage2(object):
 
 		x_low_train, y_low_train, low_train_embeds = load_data()
 		x_low_test, y_low_test, low_test_embeds = load_data()
+
+		real = np.ones((self.batch_size, 1), dtype='float') * 0.9
+		fake = np.zeros((self.batch_size, 1), dtype='float') * 0.1
+
+		for epoch in range(self.epochs):
+			print(f'Epoch: {epoch}')
+
+			gen_loss = []
+			disc_loss = []
+
+			num_batches = int(x_high_train[0] / batch_size)
+
+			for i in range(num_batches):
+
+				latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
+				embedding_text = embeds[i * self.batch_size:(i + 1) * self.batch_size]
+				compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
+				compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, self.conditioning_dim))
+				compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
+
+				image_batch = x_high_train[i * self.batch_size:(i+1) * self.batch_size]
+				image_batch = (image_batch - 127.5) / 127.5
+				
+				low_res_fakes, _ = self.stage1_generator.predict([embedding_text, latent_space], verbose=3)
+				high_res_fakes, _ = self.stage2_generator.predict([embedding_text, low_res_fakes], verbose=3)
+
+				discriminator_loss = self.stage2_discriminator.train_on_batch([image_batch, compressed_embedding],
+					np.reshape(real, (self.batch_size, 1)))
+
+				discriminator_loss_gen = self.stage2_discriminator.train_on_batch([high_res_fakes, compressed_embedding],
+					np.reshape(fake, (self.batch_size, 1)))
+
+				discriminator_loss_fake = self.stage2_discriminator.train_on_batch([image_batch[:(self.batch_size-1)], compressed_embedding],
+					np.reshape(fake[: (self.batch_size-1)], (self.batch_size, 1)))
+
+				d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_fake))
+				disc_loss.append(d_loss)
+
+				print(f'Discriminator Loss: {d_loss}')
+
+				g_loss = self.stage2_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
+					[K.ones((self.batch_size, 1)) * 0.9, K.ones((self.batch_size, 256)) * 0.9])
+				gen_loss.append(g_loss)
+
+				print(f'Generator Loss: {g_loss}')
+
+				# TODO: Save Model after certain number of epochs are done
