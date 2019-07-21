@@ -42,7 +42,7 @@ def download_data(download_path):
 if args['download_path'] is not None:
 	path = download_data(args["download_path"])
 else:
-	cur = os.path.getcwd()
+	cur = os.getcwd()
 	path = download_data(cur)
 
 # TODO: Download the Char-CNN-RNN embeddings

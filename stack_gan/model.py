@@ -29,12 +29,22 @@ assert tf.__version__.startswith('2')
 from PIL import Image
 import tensorflow.keras.backend as K
 from tensorflow.keras import Input, Model
-from tensorflow.keras.layers import LeakyRelu, BatchNormalization, Relu, Activation
-from tensorflow.keras.layers import UpSampling2D, Conv2D, Concatenate, Dense
+from tensorflow.keras.layers import LeakyReLU, BatchNormalization, ReLU, Activation
+from tensorflow.keras.layers import UpSampling2D, Conv2D, Concatenate, Dense, concatenate
 from tensorflow.keras.layers import Flatten, Lambda, Reshape
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+data_dir = "data/birds/"
+train_dir = data_dir + "/train"
+test_dir = data_dir + "/test"
+embeddings_path_train = train_dir + "/char-CNN-RNN-embeddings.pickle"
+embeddings_path_test = test_dir + "/char-CNN-RNN-embeddings.pickle"
+filename_path_train = train_dir + "/filenames.pickle"
+filename_path_test = test_dir + "/filenames.pickle"
+class_id_path_train = train_dir + "/class_info.pickle"
+class_id_path_test = test_dir + "/class_info.pickle"
+dataset_path = data_dir + "/CUB_200_2011"
 
 ############################################################
 # Conditioning Augmentation Network
@@ -44,7 +54,7 @@ def conditioning_augmentation(x):
 	"""The mean_logsigma passed as argument is converted into the text conditioning variable.
 
 	Args:
-		x: The output of the text embedding passed through a FC layer with LeakyRelu non-linearity.
+		x: The output of the text embedding passed through a FC layer with LeakyReLU non-linearity.
 
 	Returns:
 	 	c: The text conditioning variable after computation.
@@ -52,7 +62,7 @@ def conditioning_augmentation(x):
 	mean = x[:, :128]
 	log_sigma = x[:, 128:]
 
-	stddev = tf.keras.math.exp(log_sigma)
+	stddev = tf.math.exp(log_sigma)
 	epsilon = K.random_normal(shape=K.constant((mean.shape[1], ), dtype='int32'))
 	c = mean + stddev * epsilon
 	return c
@@ -62,8 +72,8 @@ def build_ca_network():
 	"""
 	input_layer1 = Input(shape=(1024,))
 	mls = Dense(256)(input_layer1)
-	mls = LeakyRelu(alpha=0.2)(mls)
-	ca = lambda(conditioning_augmentation)(mls)
+	mls = LeakyReLU(alpha=0.2)(mls)
+	ca = Lambda(conditioning_augmentation)(mls)
 	return Model(inputs=[input_layer1], outputs=[ca])
 
 
@@ -72,7 +82,7 @@ def build_ca_network():
 ############################################################
 
 def UpSamplingBlock(x, num_kernels):
-	"""An Upsample block with Upsampling2D, Conv2D, BatchNormalization and a Relu activation.
+	"""An Upsample block with Upsampling2D, Conv2D, BatchNormalization and a ReLU activation.
 
 	Args:
 		x: The preceding layer as input.
@@ -84,7 +94,7 @@ def UpSamplingBlock(x, num_kernels):
 	x = UpSampling2D(size=(2,2))(x)
 	x = Conv2D(num_kernels, kernel_size=(3,3), padding='same', strides=1, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 	return x
 
 def build_stage1_generator():
@@ -95,16 +105,16 @@ def build_stage1_generator():
 	"""
 	input_layer1 = Input(shape=(1024,))
 	ca = Dense(256)(input_layer1)
-	ca = LeakyRelu(alpha=0.2)(ca)
+	ca = LeakyReLU(alpha=0.2)(ca)
 
 	# Obtain the conditioned text
-	c = lambda(conditioning_augmentation)(ca)
+	c = Lambda(conditioning_augmentation)(ca)
 
 	input_layer2 = Input(shape=(100,))
 	concat = Concatenate(axis=1)([c, input_layer2])
 
-	x = Dense(16384, use_bias=False)(conact)
-	x = Relu()(x)
+	x = Dense(16384, use_bias=False)(concat)
+	x = ReLU()(x)
 	x = Reshape((4, 4, 1024), input_shape=(16384,))(x)
 
 	x = UpSamplingBlock(x, 512)
@@ -124,7 +134,7 @@ def build_stage1_generator():
 ############################################################	
 
 def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
-	"""A ConvBlock with a Conv2D, BatchNormalization and LeakyRelu activation.
+	"""A ConvBlock with a Conv2D, BatchNormalization and LeakyReLU activation.
 
 	Args:
 		x: The preceding layer as input.
@@ -137,7 +147,7 @@ def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	
 	if activation:
-		x = LeakyRelu(alpha=0.2)(x)
+		x = LeakyReLU(alpha=0.2)(x)
 	return x
 
 def build_embedding_compressor():
@@ -160,7 +170,7 @@ def build_stage1_discriminator():
 	input_layer1 = Input(shape=(64, 64, 3))
 
 	x = Conv2D(64, kernel_size=(4,4), strides=2, padding='same', use_bias=False)(input_layer1)
-	x = LeakyRelu(alpha=0.2)(x)
+	x = LeakyReLU(alpha=0.2)(x)
 
 	x = ConvBlock(x, 128)
 	x = ConvBlock(x, 256)
@@ -172,7 +182,7 @@ def build_stage1_discriminator():
 
 	x1 = Conv2D(512, kernel_size=(1,1), padding='same', strides=1, use_bias=False)(concat)
 	x1 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x1 = LeakyRelu(alpha=0.2)(x)
+	x1 = LeakyReLU(alpha=0.2)(x)
 
 	# Flatten and add a FC layer to predict.
 	x1 = Flatten()(x1)
@@ -243,13 +253,13 @@ def residual_block(inputs):
 	"""
 	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 	
 	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	
 	x = add([x, inputs])
-	x = Relu()(x)
+	x = ReLU()(x)
 
 	return x
 
@@ -264,23 +274,23 @@ def build_stage2_generator():
 
 	# Conditioning Augmentation
 	ca = Dense(256)(input_layer1)
-	ca = LeakyRelu(alpha=0.2)(ca)
-	c = lambda(conditioning_augmentation)(ca)
+	ca = LeakyReLU(alpha=0.2)(ca)
+	c = Lambda(conditioning_augmentation)(ca)
 
 	# Downsampling block
 	x = ZeroPadding2D(padding=(1,1))(input_images)
 	x = Conv2D(128, kernel_size=(3,3), strides=1, use_bias=False)(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 
 	x = ZeroPadding2D(padding=(1,1))(x)
 	x = Conv2D(256, kernel_size=(4,4), strides=2, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 
 	x = ZeroPadding2D(padding=(1,1))(x)
 	x = Conv2D(512, kernel_size=(4,4), strides=2, use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 
 	# Concatenate text conditioning block with the encoded image
 	concat = concat_along_dims([c, x])
@@ -289,7 +299,7 @@ def build_stage2_generator():
 	x = ZeroPadding2D(padding=(1,1))(concat)
 	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
-	x = Relu()(x)
+	x = ReLU()(x)
 
 	x = residual_block(x)
 	x = residual_block(x)
@@ -323,7 +333,7 @@ def build_stage2_discriminator():
 	input_layer1 = Input(shape=(256, 256, 3))
 
 	x = Conv2D(64, kernel_size=(4,4), padding='same', strides=2, use_bias=False)(input_layer1)
-	x = LeakyRelu(alpha=0.2)(x)
+	x = LeakyReLU(alpha=0.2)(x)
 
 	x = ConvBlock(x, 128)
 	x = ConvBlock(x, 256)
@@ -338,7 +348,7 @@ def build_stage2_discriminator():
 	x1 = ConvBlock(x1, 128, (3,3), 1, False)
 
 	x2 = add([x, x1])
-	x2 = LeakyRelu(alpha=0.2)(x2)
+	x2 = LeakyReLU(alpha=0.2)(x2)
 
 	# Concatenate compressed and spatially replicated embedding
 	input_layer2 = Input(shape=(4, 4, 128))
@@ -346,7 +356,7 @@ def build_stage2_discriminator():
 
 	x3 = Conv2D(512, kernel_size=(1,1), strides=1, padding='same')(concat)
 	x3 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x3)
-	x3 = LeakyRelu(alpha=0.2)(x3)
+	x3 = LeakyReLU(alpha=0.2)(x3)
 
 	# Flatten and add a FC layer
 	x3 = Flatten()(x3)
@@ -510,7 +520,7 @@ class StackGanStage1(object):
 		stage1_generator_lr: Learning rate for stage 1 generator
 		stage1_discriminator_lr: Learning rate for stage 1 discriminator
 	"""
-	def __init__(self, epochs=1000, z_dim=100, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
+	def __init__(self, epochs=10, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -522,15 +532,15 @@ class StackGanStage1(object):
 		self.stage1_generator_optimizer = Adam(lr=stage1_generator_lr, beta_1=0.5, beta_2=0.999)
 		self.stage1_discriminator_optimizer = Adam(lr=stage1_discriminator_lr, beta_1=0.5, beta_2=0.999)
 		self.stage1_generator = build_stage1_generator()
-		self.stage1_generator.compile(loss='mse', optimizer=stage1_generator_optimizer)
+		self.stage1_generator.compile(loss='mse', optimizer=self.stage1_generator_optimizer)
 		self.stage1_discriminator = build_stage1_discriminator()
-		self.stage1_discriminator.compile(loss='binary_crossentropy', optimizer=stage1_discriminator_optimizer)
+		self.stage1_discriminator.compile(loss='binary_crossentropy', optimizer=self.stage1_discriminator_optimizer)
 		self.ca_network = build_ca_network()
 		self.ca_network.compile(loss='binary_crossentropy', optimizer='Adam')
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
-		self.stage1_adversarial = build_adversarial()
-		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=stage1_generator_optimizer)
+		self.stage1_adversarial = build_adversarial(self.stage1_generator, self.stage1_discriminator)
+		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=self.stage1_generator_optimizer)
 		self.checkpoint1 = tf.train.Checkpoint(
         	generator_optimizer=self.stage1_generator_optimizer,
         	discriminator_optimizer=self.stage1_discriminator_optimizer,
@@ -541,65 +551,67 @@ class StackGanStage1(object):
 		"""Running Tensorboard visualizations.
 		"""
 		tb = TensorBoard(log_dir="logs/".format(time.time()))
-	    tb.set_model(self.stage1_generator)
-	    tb.set_model(self.stage1_discriminator)
-	    tb.set_model(self.ca_network)
-	    tb.set_model(self.embedding_compressor)
+		tb.set_model(self.stage1_generator)
+		tb.set_model(self.stage1_discriminator)
+		tb.set_model(self.ca_network)
+		tb.set_model(self.embedding_compressor)
 
 	def train_stage1():
 		"""Trains the stage1 StackGAN.
 		"""
+
 		x_train, y_train, train_embeds = load_data(filename_path=filename_path_train, class_id_path=class_id_path_train,
 			dataset_path=dataset_path, embeddings_path=embeddings_path_train, size=(64, 64))
 
-		x_test, y_test, test_embeds = load_data()
+		x_test, y_test, test_embeds = load_data(filename_path=filename_path_test, class_id_path=class_id_path_test, 
+			dataset_path=dataset_path, embeddings_path=embeddings_path_test, size=(64, 64))
 
 		real = np.ones((self.batch_size, 1), dtype='float') * 0.9
 		fake = np.zeros((self.batch_size, 1), dtype='float') * 0.1
 
 		for epoch in range(self.epochs):
 			print(f'Epoch: {epoch}')
- 
-         	gen_loss = []
-        	dis_loss = []
 
-        	num_batches = x_train[0] / self.batch_size
+			gen_loss = []
+			dis_loss = []
 
-        	for i in range(num_batches):
-        		print(f'Batch: {i+1}')
+			num_batches = x_train[0] / self.batch_size
 
-        		latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
-        		embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
-        		compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
-        		compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, 128))
-        		compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
+			for i in range(num_batches):
+				print(f'Batch: {i+1}')
 
-        		image_batch = x_train[i * self.batch_size:(i+1) * self.batch_size]
-        		image_batch = (image_batch - 127.5) / 127.5
+				latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
+				embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
+				compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
+				compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, 128))
+				compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
 
-        		gen_images, _ = self.stage1_generator.predict([embedding_text, latent_space])
+				image_batch = x_train[i * self.batch_size:(i+1) * self.batch_size]
+				image_batch = (image_batch - 127.5) / 127.5
 
-        		discriminator_loss = self.stage1_discriminator.train_on_batch([image_batch, compressed_embedding], 
-        			np.reshape(real, (self.batch_size, 1)))
+				gen_images, _ = self.stage1_generator.predict([embedding_text, latent_space])
 
-        		discriminator_loss_gen = self.build_stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
-        			np.reshape(fake, (self.batch_size, 1)))
+				discriminator_loss = self.stage1_discriminator.train_on_batch([image_batch, compressed_embedding], 
+					np.reshape(real, (self.batch_size, 1)))
 
-        		discriminator_loss_wrong = self.stage1_discriminator.train_on_batch([gen_images[: self.batch_size-1], compressed_embedding[1:]], 
-        			np.reshape(fake[1:], (self.batch_size-1, 1)))
+				discriminator_loss_gen = self.build_stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
+					np.reshape(fake, (self.batch_size, 1)))
 
-        		# Discriminator loss
-        		d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_wrong))
-        		dis_loss.apend(d_loss)
+				discriminator_loss_wrong = self.stage1_discriminator.train_on_batch([gen_images[: self.batch_size-1], compressed_embedding[1:]], 
+					np.reshape(fake[1:], (self.batch_size-1, 1)))
 
-        		print(f'Discriminator Loss: {d_loss}')
+				# Discriminator loss
+				d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_wrong))
+				dis_loss.apend(d_loss)
 
-        		# Generator loss
-        		g_loss = self.stage1_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
-        			[K.ones((batch_size, 1)) * 0.9, K.ones((batch_size, 256)) * 0.9])
+				print(f'Discriminator Loss: {d_loss}')
 
-            	print(f'Generator Loss: {g_loss}')
-            	gen_loss.append(g_loss)
+				# Generator loss
+				g_loss = self.stage1_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
+					[K.ones((batch_size, 1)) * 0.9, K.ones((batch_size, 256)) * 0.9])
+
+				print(f'Generator Loss: {g_loss}')
+				gen_loss.append(g_loss)
 
 		self.stage1_generator.save_weights('stage1_gen.h5')
 		self.stage1_discriminator.save_weights("stage1_disc.h5")
@@ -616,7 +628,7 @@ class StackGanStage2(object):
 		stage2_generator_lr: Learning rate for stage 2 generator
 		stage2_discriminator_lr: Learning rate for stage 2 discriminator
 	"""
-	def __init__(self, epochs=1000, z_dim=100, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
+	def __init__(self, epochs=10, z_dim=100, batch_size=64, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -629,17 +641,17 @@ class StackGanStage2(object):
 		self.stage2_generator_optimizer = Adam(lr=stage2_generator_lr, beta_1=0.5, beta_2=0.999)
 		self.stage2_discriminator_optimizer = Adam(lr=stage2_discriminator_lr, beta_1=0.5, beta_2=0.999)
 		self.stage1_generator = build_stage1_generator()
-		self.stage1_generator.compile(loss='binary_crossentropy', optimizer=stage2_generator_optimizer)
+		self.stage1_generator.compile(loss='binary_crossentropy', optimizer=self.stage2_generator_optimizer)
 		self.stage2_generator = build_stage2_generator()
-		self.stage2_generator.compile(loss='binary_crossentropy', optimizer=stage2_generator_optimizer)
+		self.stage2_generator.compile(loss='binary_crossentropy', optimizer=self.stage2_generator_optimizer)
 		self.stage2_discriminator = build_stage2_discriminator()
-		self.stage2_discriminator.compile(loss='binary_crossentropy', optimizer=stage2_discriminator_optimizer)
+		self.stage2_discriminator.compile(loss='binary_crossentropy', optimizer=self.stage2_discriminator_optimizer)
 		self.ca_network = build_ca_network()
 		self.ca_network.compile(loss='binary_crossentropy', optimizer='Adam')
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
-		self.stage2_adversarial = build_adversarial()
-		self.stage2_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=stage2_generator_optimizer)	
+		self.stage2_adversarial = stage2_adversarial_network(self.stage2_discriminator, self.stage2_generator, self.stage1_generator)
+		self.stage2_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=self.stage2_generator_optimizer)	
 		self.checkpoint2 = tf.train.Checkpoint(
         	generator_optimizer=self.stage2_generator_optimizer,
         	discriminator_optimizer=self.stage2_discriminator_optimizer,
@@ -651,17 +663,23 @@ class StackGanStage2(object):
 		"""Running Tensorboard visualizations.
 		"""
 		tb = TensorBoard(log_dir="logs/".format(time.time()))
-	    tb.set_model(self.stage2_generator)
-	    tb.set_model(self.stage2_discriminator)
-	    
+		tb.set_model(self.stage2_generator)
+		tb.set_model(self.stage2_discriminator)
+
 	def train_stage2():
 		"""Trains Stage 2 StackGAN.
 		"""
-		x_high_train, y_high_train, high_train_embeds = load_data()
-		x_high_test, y_high_test, high_test_embeds = load_data()
+		x_high_train, y_high_train, high_train_embeds = load_data(filename_path=filename_path_train, class_id_path=class_id_path_train,
+			dataset_path=dataset_path, embeddings_path=embeddings_path_train, size=(256, 256))
 
-		x_low_train, y_low_train, low_train_embeds = load_data()
-		x_low_test, y_low_test, low_test_embeds = load_data()
+		x_high_test, y_high_test, high_test_embeds = load_data(filename_path=filename_path_test, class_id_path=class_id_path_test, 
+			dataset_path=dataset_path, embeddings_path=embeddings_path_test, size=(256, 256))
+
+		x_low_train, y_low_train, low_train_embeds = load_data(filename_path=filename_path_train, class_id_path=class_id_path_train,
+			dataset_path=dataset_path, embeddings_path=embeddings_path_train, size=(64, 64))
+
+		x_low_test, y_low_test, low_test_embeds = load_data(filename_path=filename_path_test, class_id_path=class_id_path_test, 
+			dataset_path=dataset_path, embeddings_path=embeddings_path_test, size=(64, 64))
 
 		real = np.ones((self.batch_size, 1), dtype='float') * 0.9
 		fake = np.zeros((self.batch_size, 1), dtype='float') * 0.1
