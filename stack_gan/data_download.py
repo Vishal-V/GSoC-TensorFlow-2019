@@ -25,7 +25,7 @@ import tensorflow as tf
 assert tf.__version__.startswith('2')
 
 ap = argparse.ArgumentParser()
-ap.add_argument('-dp', '--download_path', required=True, help='Download Path')
+ap.add_argument('-dp', '--download_path', required=False, help='Download Path')
 args = vars(ap.parse_args())
 
 data_url = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
@@ -39,7 +39,11 @@ def download_data(download_path):
 
 	return path_to_folder
 
-download_data(args["download_path"])
+if args['download_path'] is not None:
+	path = download_data(args["download_path"])
+else:
+	cur = os.path.getcwd()
+	path = download_data(cur)
 
 # TODO: Download the Char-CNN-RNN embeddings
-embedings_url = "https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE"
+embeddings_url = "https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE"

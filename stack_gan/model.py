@@ -460,7 +460,6 @@ def load_images(image_path, bounding_box, size):
 	image = image.resize(size, PIL.Image.BILINEAR)
 	return image
 
-# TODO: load the data and labels from the CUB birds folder
 def load_data(filename_path, class_id_path, dataset_path, embeddings_path, size):
 	"""Loads the Dataset.
 	"""
@@ -469,8 +468,28 @@ def load_data(filename_path, class_id_path, dataset_path, embeddings_path, size)
 	bbox_dict = load_bbox(dataset_path)
 
 	x, y, embeds = [], [], []
-	
 
+	for i, filename in enumerate(filenames):
+		bbox = bbox_dict[filename]
+
+		try:
+			image_path = f'{dataset_path}/images/{filename}.jpg'
+			image = load_images(image_path, bbox, size)
+			e = embeddings[i, :, :]
+			embed_index = np.random.randint(0, e.shape[0] - 1)
+			embed = e[embed_index, :]
+
+			x.append(image)
+			y.append(class_id[i])
+			embeds.append(embed)
+
+		except Exception as e:
+			print(f'{e}')
+
+		x = np.array(x)
+		y = np.array(y)
+		embeds = np.array(embeds)
+	
 	return x, y, embeds
 
 # TODO: Instance Normalization
@@ -530,8 +549,9 @@ class StackGanStage1(object):
 	def train_stage1():
 		"""Trains the stage1 StackGAN.
 		"""
+		x_train, y_train, train_embeds = load_data(filename_path=filename_path_train, class_id_path=class_id_path_train,
+			dataset_path=dataset_path, embeddings_path=embeddings_path_train, size=(64, 64))
 
-		x_train, y_train, train_embeds = load_data()
 		x_test, y_test, test_embeds = load_data()
 
 		real = np.ones((self.batch_size, 1), dtype='float') * 0.9
@@ -581,7 +601,8 @@ class StackGanStage1(object):
             	print(f'Generator Loss: {g_loss}')
             	gen_loss.append(g_loss)
 
-            	# TODO: Save Model after certain number of epochs are done
+		self.stage1_generator.save_weights('stage1_gen.h5')
+		self.stage1_discriminator.save_weights("stage1_disc.h5")
 
 
 class StackGanStage2(object):
@@ -633,7 +654,6 @@ class StackGanStage2(object):
 	    tb.set_model(self.stage2_generator)
 	    tb.set_model(self.stage2_discriminator)
 	    
-	# TODO: Stage 2
 	def train_stage2():
 		"""Trains Stage 2 StackGAN.
 		"""
@@ -688,4 +708,5 @@ class StackGanStage2(object):
 
 				print(f'Generator Loss: {g_loss}')
 
-				# TODO: Save Model after certain number of epochs are done
+		self.stage2_generator.save_weights('stage2_gen.h5')
+		self.stage2_discriminator.save_weights("stage2_disc.h5")
