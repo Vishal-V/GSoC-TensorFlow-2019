@@ -426,15 +426,50 @@ def load_text_embeddings(text_embeddings):
 
 	return embeds
 
-# TODO: Load Images
-def load_images():
-	pass
+def load_bbox(data_path):
+	bbox_path = os.path.join(data_path, 'bounding_box.txt')
+	image_path = os.path.join(data_path, 'image.txt')
+	bbox_df = pd.read_csv(bbox_path, delim_whitespace=True, header=None).astype(int)
+	filename_df = pd.read_csv(image_path, delim_whitespace=True, header=None)
+
+	filenames = filename_df[1].tolist()
+	bbox_dict = {i[:-4]:[] for i in filenames[:2]}
+
+	for i in range(0, len(filenames)):
+		bbox = bbox_df.iloc[i][1:].tolist()
+		dict_key = filenames[i][:-4]
+		bbox_dict[key] = bbox
+
+	return bbox_dict
+
+def load_images(image_path, bounding_box, size):
+	"""Crops the image to the bounding box and then resizes it.
+	"""
+	image = Image.open(image_path).convert('RGB')
+	w, h = image.size
+	if bounding_box is not None:
+		r = int(np.maximum(bounding_box[2], bounding_box[3]) * 0.75)
+		c_x = int((bounding_box[0] + bounding_box[2]) / 2)
+		c_y = int((bounding_box[1] + bounding_box[3]) / 2)
+		y1 = np.maximum(0, c_y - r)
+		y2 = np.minimum(h, c_y + r)
+		x1 = np.maximum(0, c_x - r)
+		x2 = np.minimum(w, c_x + r)
+		image = image.crop([x1, y1, x2, y2])
+
+	image = image.resize(size, PIL.Image.BILINEAR)
+	return image
 
 # TODO: load the data and labels from the CUB birds folder
-def load_data():
-	x = []
-	y = []
-	embeds = []
+def load_data(filename_path, class_id_path, dataset_path, embeddings_path, size):
+	"""Loads the Dataset.
+	"""
+	class_id, filenames = load_class_ids_filenames(class_id_path, filename_path)
+	embeddings = load_text_embeddings(embeddings_path)
+	bbox_dict = load_bbox(dataset_path)
+
+	x, y, embeds = [], [], []
+	
 
 	return x, y, embeds
 
