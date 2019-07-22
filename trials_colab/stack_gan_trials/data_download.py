@@ -32,10 +32,10 @@ data_url = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_20
 
 def download_data(download_path):
 	path_to_zip = tf.keras.utils.get_file(
-		'/data/birds/CUB_200_2011.tgz', cache_subdir=download_path,
+		'CUB_200_2011.tgz', cache_subdir=download_path,
 		origin = data_url, extract=True)
 
-	path_to_folder = os.path.join(os.path.dirname(path_to_zip), 'data/birds/')
+	path_to_folder = os.path.join(os.path.dirname(path_to_zip), 'birds/')
 
 	return path_to_folder
 

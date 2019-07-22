@@ -36,7 +36,7 @@ from tensorflow.keras.layers import Flatten, Lambda, Reshape, ZeroPadding2D, add
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-data_dir = "data/birds"
+data_dir = "birds"
 train_dir = data_dir + "/train"
 test_dir = data_dir + "/test"
 embeddings_path_train = train_dir + "/char-CNN-RNN-embeddings.pickle"
@@ -45,7 +45,7 @@ filename_path_train = train_dir + "/filenames.pickle"
 filename_path_test = test_dir + "/filenames.pickle"
 class_id_path_train = train_dir + "/class_info.pickle"
 class_id_path_test = test_dir + "/class_info.pickle"
-dataset_path = data_dir + "/CUB_200_2011"
+dataset_path = "/CUB_200_2011"
 
 ############################################################
 # Conditioning Augmentation Network
@@ -521,7 +521,7 @@ class StackGanStage1(object):
 		stage1_generator_lr: Learning rate for stage 1 generator
 		stage1_discriminator_lr: Learning rate for stage 1 discriminator
 	"""
-	def __init__(self, epochs=100, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
+	def __init__(self, epochs=500, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -579,7 +579,6 @@ class StackGanStage1(object):
 			num_batches = int(x_train.shape[0] / self.batch_size)
 
 			for i in range(num_batches):
-				print(f'Batch: {i+1}')
 
 				latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
 				embedding_text = train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
@@ -629,7 +628,7 @@ class StackGanStage2(object):
 		stage2_generator_lr: Learning rate for stage 2 generator
 		stage2_discriminator_lr: Learning rate for stage 2 discriminator
 	"""
-	def __init__(self, epochs=100, z_dim=100, batch_size=64, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
+	def __init__(self, epochs=500, z_dim=100, batch_size=64, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -692,12 +691,12 @@ class StackGanStage2(object):
 			gen_loss = []
 			disc_loss = []
 
-			num_batches = int(x_high_train.shape[0] / batch_size)
+			num_batches = int(x_high_train.shape[0] / self.batch_size)
 
 			for i in range(num_batches):
 
 				latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
-				embedding_text = embeds[i * self.batch_size:(i + 1) * self.batch_size]
+				embedding_text = high_train_embeds[i * self.batch_size:(i + 1) * self.batch_size]
 				compressed_embedding = self.embedding_compressor.predict_on_batch(embedding_text)
 				compressed_embedding = np.reshape(compressed_embedding, (-1, 1, 1, self.conditioning_dim))
 				compressed_embedding = np.tile(compressed_embedding, (1, 4, 4, 1))
@@ -714,8 +713,8 @@ class StackGanStage2(object):
 				discriminator_loss_gen = self.stage2_discriminator.train_on_batch([high_res_fakes, compressed_embedding],
 					np.reshape(fake, (self.batch_size, 1)))
 
-				discriminator_loss_fake = self.stage2_discriminator.train_on_batch([image_batch[:(self.batch_size-1)], compressed_embedding],
-					np.reshape(fake[: (self.batch_size-1)], (self.batch_size, 1)))
+				discriminator_loss_fake = self.stage2_discriminator.train_on_batch([image_batch[:(self.batch_size-1)], compressed_embedding[1:]],
+					np.reshape(fake[1:], (self.batch_size - 1, 1)))
 
 				d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_fake))
 				disc_loss.append(d_loss)
