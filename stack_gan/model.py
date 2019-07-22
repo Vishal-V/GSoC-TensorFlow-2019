@@ -26,16 +26,17 @@ import tensorflow as tf
 
 assert tf.__version__.startswith('2')
 
+import PIL
 from PIL import Image
 import tensorflow.keras.backend as K
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import LeakyReLU, BatchNormalization, ReLU, Activation
 from tensorflow.keras.layers import UpSampling2D, Conv2D, Concatenate, Dense, concatenate
-from tensorflow.keras.layers import Flatten, Lambda, Reshape
+from tensorflow.keras.layers import Flatten, Lambda, Reshape, ZeroPadding2D, add
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-data_dir = "data/birds/"
+data_dir = "data/birds"
 train_dir = data_dir + "/train"
 test_dir = data_dir + "/test"
 embeddings_path_train = train_dir + "/char-CNN-RNN-embeddings.pickle"
@@ -242,7 +243,7 @@ def concat_along_dims(inputs):
 	c = K.tile(c, [1, 16, 16, 1])
 	return K.concatenate([c, x], axis = 3)
 
-def residual_block(inputs):
+def residual_block(input):
 	"""Residual block with plain identity connections.
 
 	Args:
@@ -251,14 +252,14 @@ def residual_block(inputs):
 	Returns:
 		Layer with computed identity mapping.
 	"""
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(input)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 	
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(inputs)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	
-	x = add([x, inputs])
+	x = add([x, input])
 	x = ReLU()(x)
 
 	return x
@@ -274,8 +275,8 @@ def build_stage2_generator():
 
 	# Conditioning Augmentation
 	ca = Dense(256)(input_layer1)
-	ca = LeakyReLU(alpha=0.2)(ca)
-	c = Lambda(conditioning_augmentation)(ca)
+	mls = LeakyReLU(alpha=0.2)(ca)
+	c = Lambda(conditioning_augmentation)(mls)
 
 	# Downsampling block
 	x = ZeroPadding2D(padding=(1,1))(input_images)
@@ -297,7 +298,7 @@ def build_stage2_generator():
 
 	# Residual Blocks
 	x = ZeroPadding2D(padding=(1,1))(concat)
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = Conv2D(512, kernel_size=(3,3), use_bias=False)(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 
@@ -314,8 +315,8 @@ def build_stage2_generator():
 
 	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False)(x)
 	x = Activation('tanh')(x)
-
-	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, ca])
+	
+	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, mls])
 	return stage2_gen
 
 
@@ -345,7 +346,7 @@ def build_stage2_discriminator():
 
 	x1 = ConvBlock(x, 128, (1,1), 1)
 	x1 = ConvBlock(x1, 128, (3,3), 1)
-	x1 = ConvBlock(x1, 128, (3,3), 1, False)
+	x1 = ConvBlock(x1, 512, (3,3), 1, False)
 
 	x2 = add([x, x1])
 	x2 = LeakyReLU(alpha=0.2)(x2)
@@ -384,7 +385,7 @@ def stage2_adversarial_network(stage2_disc, stage2_gen, stage1_gen):
 	"""
 	conditioned_embedding = Input(shape=(1024, ))
 	latent_space = Input(shape=(100, ))
-	compressed_replicated = Inpt(shape=(4, 4, 128))
+	compressed_replicated = Input(shape=(4, 4, 128))
 
 	input_images, ca = stage1_gen([conditioned_embedding, latent_space])
 	stage2_disc.trainable = False
@@ -411,7 +412,7 @@ def adversarial_loss(y_true, y_pred):
 	mean = y_pred[:, :128]
 	ls = y_pred[:, 128:]
 	loss = -ls + 0.5 * (-1 + tf.math.exp(2.0 * ls) + tf.math.square(mean))
-	loss = tf.math.mean(loss)
+	loss = K.mean(loss)
 	return loss
 
 def normalize(input_image, real_image):
@@ -437,8 +438,8 @@ def load_text_embeddings(text_embeddings):
 	return embeds
 
 def load_bbox(data_path):
-	bbox_path = os.path.join(data_path, 'bounding_box.txt')
-	image_path = os.path.join(data_path, 'image.txt')
+	bbox_path = os.path.join(data_path, 'bounding_boxes.txt')
+	image_path = os.path.join(data_path, 'images.txt')
 	bbox_df = pd.read_csv(bbox_path, delim_whitespace=True, header=None).astype(int)
 	filename_df = pd.read_csv(image_path, delim_whitespace=True, header=None)
 
@@ -448,7 +449,7 @@ def load_bbox(data_path):
 	for i in range(0, len(filenames)):
 		bbox = bbox_df.iloc[i][1:].tolist()
 		dict_key = filenames[i][:-4]
-		bbox_dict[key] = bbox
+		bbox_dict[dict_key] = bbox
 
 	return bbox_dict
 
@@ -482,23 +483,23 @@ def load_data(filename_path, class_id_path, dataset_path, embeddings_path, size)
 	for i, filename in enumerate(filenames):
 		bbox = bbox_dict[filename]
 
-		try:
+		try:	
 			image_path = f'{dataset_path}/images/{filename}.jpg'
 			image = load_images(image_path, bbox, size)
 			e = embeddings[i, :, :]
 			embed_index = np.random.randint(0, e.shape[0] - 1)
 			embed = e[embed_index, :]
 
-			x.append(image)
+			x.append(np.array(image))
 			y.append(class_id[i])
 			embeds.append(embed)
 
 		except Exception as e:
 			print(f'{e}')
-
-		x = np.array(x)
-		y = np.array(y)
-		embeds = np.array(embeds)
+	
+	x = np.array(x)
+	y = np.array(y)
+	embeds = np.array(embeds)
 	
 	return x, y, embeds
 
@@ -540,14 +541,14 @@ class StackGanStage1(object):
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
 		self.stage1_adversarial = build_adversarial(self.stage1_generator, self.stage1_discriminator)
-		self.stage1_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=self.stage1_generator_optimizer)
+		self.stage1_adversarial.compile(loss=['binary_crossentropy', adversarial_loss], loss_weights=[1, 2.0], optimizer=self.stage1_generator_optimizer)
 		self.checkpoint1 = tf.train.Checkpoint(
         	generator_optimizer=self.stage1_generator_optimizer,
         	discriminator_optimizer=self.stage1_discriminator_optimizer,
         	generator=self.stage1_generator,
         	discriminator=self.stage1_discriminator)
 
-	def visualize_stage1():
+	def visualize_stage1(self):
 		"""Running Tensorboard visualizations.
 		"""
 		tb = TensorBoard(log_dir="logs/".format(time.time()))
@@ -556,7 +557,7 @@ class StackGanStage1(object):
 		tb.set_model(self.ca_network)
 		tb.set_model(self.embedding_compressor)
 
-	def train_stage1():
+	def train_stage1(self):
 		"""Trains the stage1 StackGAN.
 		"""
 
@@ -575,7 +576,7 @@ class StackGanStage1(object):
 			gen_loss = []
 			dis_loss = []
 
-			num_batches = x_train[0] / self.batch_size
+			num_batches = int(x_train.shape[0] / self.batch_size)
 
 			for i in range(num_batches):
 				print(f'Batch: {i+1}')
@@ -594,7 +595,7 @@ class StackGanStage1(object):
 				discriminator_loss = self.stage1_discriminator.train_on_batch([image_batch, compressed_embedding], 
 					np.reshape(real, (self.batch_size, 1)))
 
-				discriminator_loss_gen = self.build_stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
+				discriminator_loss_gen = self.stage1_discriminator.train_on_batch([gen_images, compressed_embedding],
 					np.reshape(fake, (self.batch_size, 1)))
 
 				discriminator_loss_wrong = self.stage1_discriminator.train_on_batch([gen_images[: self.batch_size-1], compressed_embedding[1:]], 
@@ -602,13 +603,13 @@ class StackGanStage1(object):
 
 				# Discriminator loss
 				d_loss = 0.5 * np.add(discriminator_loss, 0.5 * np.add(discriminator_loss_gen, discriminator_loss_wrong))
-				dis_loss.apend(d_loss)
+				dis_loss.append(d_loss)
 
 				print(f'Discriminator Loss: {d_loss}')
 
 				# Generator loss
 				g_loss = self.stage1_adversarial.train_on_batch([embedding_text, latent_space, compressed_embedding],
-					[K.ones((batch_size, 1)) * 0.9, K.ones((batch_size, 256)) * 0.9])
+					[K.ones((self.batch_size, 1)) * 0.9, K.ones((self.batch_size, 256)) * 0.9])
 
 				print(f'Generator Loss: {g_loss}')
 				gen_loss.append(g_loss)
@@ -642,6 +643,7 @@ class StackGanStage2(object):
 		self.stage2_discriminator_optimizer = Adam(lr=stage2_discriminator_lr, beta_1=0.5, beta_2=0.999)
 		self.stage1_generator = build_stage1_generator()
 		self.stage1_generator.compile(loss='binary_crossentropy', optimizer=self.stage2_generator_optimizer)
+		self.stage1_generator.load_weights('stage1_gen.h5')
 		self.stage2_generator = build_stage2_generator()
 		self.stage2_generator.compile(loss='binary_crossentropy', optimizer=self.stage2_generator_optimizer)
 		self.stage2_discriminator = build_stage2_discriminator()
@@ -651,7 +653,7 @@ class StackGanStage2(object):
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
 		self.stage2_adversarial = stage2_adversarial_network(self.stage2_discriminator, self.stage2_generator, self.stage1_generator)
-		self.stage2_adversarial.compile(loss=['binary_crossentropy', 'adversarial_loss'], loss_weights=[1, 2.0], optimizer=self.stage2_generator_optimizer)	
+		self.stage2_adversarial.compile(loss=['binary_crossentropy', adversarial_loss], loss_weights=[1, 2.0], optimizer=self.stage2_generator_optimizer)	
 		self.checkpoint2 = tf.train.Checkpoint(
         	generator_optimizer=self.stage2_generator_optimizer,
         	discriminator_optimizer=self.stage2_discriminator_optimizer,
@@ -659,14 +661,14 @@ class StackGanStage2(object):
         	discriminator=self.stage2_discriminator,
         	generator1=self.stage1_generator)
 
-	def visualize_stage2():
+	def visualize_stage2(self):
 		"""Running Tensorboard visualizations.
 		"""
 		tb = TensorBoard(log_dir="logs/".format(time.time()))
 		tb.set_model(self.stage2_generator)
 		tb.set_model(self.stage2_discriminator)
 
-	def train_stage2():
+	def train_stage2(self):
 		"""Trains Stage 2 StackGAN.
 		"""
 		x_high_train, y_high_train, high_train_embeds = load_data(filename_path=filename_path_train, class_id_path=class_id_path_train,
@@ -690,7 +692,7 @@ class StackGanStage2(object):
 			gen_loss = []
 			disc_loss = []
 
-			num_batches = int(x_high_train[0] / batch_size)
+			num_batches = int(x_high_train.shape[0] / batch_size)
 
 			for i in range(num_batches):
 
