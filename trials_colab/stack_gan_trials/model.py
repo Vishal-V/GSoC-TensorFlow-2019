@@ -521,7 +521,7 @@ class StackGanStage1(object):
 		stage1_generator_lr: Learning rate for stage 1 generator
 		stage1_discriminator_lr: Learning rate for stage 1 discriminator
 	"""
-	def __init__(self, epochs=100, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
+	def __init__(self, epochs=10, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -629,7 +629,7 @@ class StackGanStage2(object):
 		stage2_generator_lr: Learning rate for stage 2 generator
 		stage2_discriminator_lr: Learning rate for stage 2 discriminator
 	"""
-	def __init__(self, epochs=100, z_dim=100, batch_size=64, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
+	def __init__(self, epochs=10, z_dim=100, batch_size=64, enable_function=True, stage2_generator_lr=0.0002, stage2_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
