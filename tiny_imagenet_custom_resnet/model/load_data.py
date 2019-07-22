@@ -1,20 +1,74 @@
+# Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Download the TinyImageNet dataset and get the ImageDataGenerator objects.
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import pandas as pd
+import numpy as np
+import occlusion
+import tensorflow
+assert tf.__version__.startswith('2')
+
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 VAL_ANNOT = "/tiny-imagenet-200/val/val_annotations.txt"
 TRAIN = "/content/tiny-imagenet-200/train/"
 VAL = "/content/tiny-imagenet-200/val/images"
 
-class LoadTinyImageNet(img_size=64, train_size=10000, val_size=1000):
-	def __init__(self, img_size, train_size, val_size):
+data_url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
+
+def occlusion():
+	"""Occlusion preprocessing to randomly cutout parts of an image to enable the model to learn 
+	more discriminative features while training. This is a regularization strategy.
+	"""
+	def occlude():
+		pass
+
+	return occlude
+
+class TinyImageNet(object):
+	def __init__(self, img_size=64, train_size=10000, val_size=1000):
 		self.img_size = img_size
 		self.train_size = train_size
 		self.val_size = val_size
 
-		# TODO: Add the link to Stanford's site to download the zip if not downloaded
-		# TODO: Unzip and set Wordnet and word labels
+	def download_data(self):
+		"""Downloads the Stanford TinyImageNet dataset to the current directory.
+		"""
+		download_path = os.getcwd()
+		path = tf.keras.utils.get_file('tiny-imagenet-200.zip', extract=True, cache_subdir=download_path,  
+				origin='http://cs231n.stanford.edu/tiny-imagenet-200.zip')
 
-	def train_val_gen(train_target=64, train_batch=64, val_target=64, val_batch=64):
+
+	def train_val_gen(self, train_target=64, train_batch=64, val_target=64, val_batch=64):
+		"""Instantiates and returns the Train and Val ImageDataGenerator objects.
+
+		Args:
+			train_target: Target size for the train geneartor. Tweak for progressive resizing.
+			train_batch: Batch size for the Train generator.
+			val_target: Target size for the val geneartor. Tweak for progressive resizing.
+			val_batch: Batch size for the val generator.
+
+		Returns:
+			train_datagen: ImageDataGenerator object for training images. 
+			val_datagen: ImageDataGenerator object for validation images.
+		"""
 		val_data = pd.read_csv(VAL_ANNOT , sep='\t', names=['File', 'Class', 'X', 'Y', 'H', 'W'])
 		val_data.drop(['X','Y','H', 'W'], axis=1, inplace=True)
 
@@ -28,6 +82,7 @@ class LoadTinyImageNet(img_size=64, train_size=10000, val_size=1000):
 		        horizontal_flip=True, # Horizontal Flip
 		        fill_mode="reflect", # Fills empty with reflections
 		        brightness_range=[0.4, 1.6],  # Increasing/decreasing brightness
+		        preprocessing_function=occlusion(v_l=0, v_h=1, pixel_level=pixel_level)
 		)
 
 		train_generator = train_datagen.flow_from_directory(
