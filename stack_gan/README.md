@@ -2,10 +2,22 @@
 ### Text to Photo-Realistic Image Synthesis
 ---
 #### Downloads
-- Download the Char-RNN-CNN embeddings from the link below and store it in the same directory as the data
-- [Download Link](https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE)
+- To download all the dependencies, simply execute 
+```
+pip install -r requirements.txt
+```
+- To download the CUB 200 dataset, simply execute the `data_download.py` file
+```
+python data_download.py
+```
+- Download the Char-RNN-CNN embeddings from this link [Download Link](https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE) and unzip it. 
 ```
 unzip birds.zip
+```
+#### Run the model
+- The `main.py` file contains the bare minimum code to run the stage 1 and stage 2 architecture. It automatically stores the weights after the specified/default number of epochs are completed.
+```
+python main.py
 ```
 #### Architecture
 - Stage 1
