@@ -33,14 +33,39 @@ VAL = "/content/tiny-imagenet-200/val/images"
 
 data_url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
 
-def occlusion():
+def occlusion(thresh_prob=0.5):
 	"""Occlusion preprocessing to randomly cutout parts of an image to enable the model to learn 
 	more discriminative features while training. This is a regularization strategy.
+
+	Adapted from:
+	[yu4u - cutout-random-erasing](https://github.com/yu4u/cutout-random-erasing)
 	"""
-	def occlude():
-		pass
+	def occlude(image):
+		height, width, channels = image.shape
+		random_prob = np.random.rand()
+
+		if random_prob > thresh_prob:
+			return image
+
+		while True:
+			s = np.random.uniform(s_l, s_h) * img_h * img_w
+            r = np.random.uniform(r_1, r_2)
+            w = int(np.sqrt(s / r))
+            h = int(np.sqrt(s * r))
+			left = np.random.randint(0, width)
+			top = np.random.randint(0, height)
+
+			if left + w <= width and top + h <= height:
+            	break
+
+		channels = np.random.uniform(v_l, v_h)
+
+        image[top:top + h, left:left + w, :] = channels
+
+        return image
 
 	return occlude
+
 
 class TinyImageNet(object):
 	def __init__(self, img_size=64, train_size=10000, val_size=1000):
