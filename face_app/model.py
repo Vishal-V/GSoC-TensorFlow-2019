@@ -34,8 +34,69 @@ class InstanceNormalization(tf.keras.layers.Layer):
 def load_data(path):
     pass
 
+def build_generator():
+    """An Autoencoder network.
+    """
+    # Convolution Block
+    input_layer1 = Input(shape=(128, 128, 3))
+    x = Conv2D(32, (7,7), strides=1, padding='same', use_bias=False)(input_layer1)
+    x = InstanceNormalization()(x)
+    x = Activation('relu')(x)
 
+    x = Conv2D(64, (3,3), strides=2, padding='same', use_bias=False)(x)
+    x = InstanceNormalization()(x)
+    x = Activation('relu')(x)
 
+    x = Conv2D(128, (3,3), strides=2, padding='same', use_bias=False)(x)
+    x = InstanceNormalization()(x)
+    x = Activation('relu')(x)
+      
+    # Residual block.
+    x1 = Conv2D(128, (3,3), strides=1, padding='same', use_bias=False)(x)
+    x1 = BatchNormalization(axis=3, momentum=0.9, epsilon=1e-5)(x1)
+    x1 = Conv2D(128, (3,3), strides=1, padding='same', use_bias=False)(x1)
+    x1 = BatchNormalization(axis=3, momentum=0.9, epsilon=1e-5)(x1)
+    x = add()([x, x1])
+
+    # Upsampling block.
+    x = Conv2DTranspose(64, (3,3), strides=2, padding='same', use_bias=False)(x)
+    x = InstanceNormalization()(x)
+    x = Activation('relu')(x)
+    x = Conv2DTranspose(32, (3,3), strides=2, padding='same', use_bias=False)(x)
+    x = InstanceNormalization()(x)
+    x = Activation('relu')(x)
+
+    output = Conv2D(3, (7,7), strides=1, padding='same', activation='tanh', use_bias=False)(x)
+
+    return Model(inputs=[input_layer1], outputs=[output])
+
+def build_discriminator():
+    input_layer = Input(shape=(128, 128, 3))
+    x = ZeroPadding2D(padding=(1,1))(input_layer)
+    x = Conv2D(64, (4,4), strides=2, padding='valid')(x)
+    x = LeakyReLU(alpha=0.2)(x)
+
+    x = ZeroPadding2D(padding=(1,1))(x)
+    x = InstanceNormalization()(x)
+    x = Conv2D(128, (4,4), strides=2, padding='valid')(x)
+    x = LeakyReLU(alpha=0.2)(x)
+
+    x = ZeroPadding2D(padding=(1,1))(x)
+    x = InstanceNormalization()(x)
+    x = Conv2D(256, (4,4), strides=2, padding='valid')(x)
+    x = LeakyReLU(alpha=0.2)(x)
+
+    x = ZeroPadding2D(padding=(1,1))(x)
+    x = InstanceNormalization()(x)
+    x = Conv2D(512, (4,4), strides=2, padding='valid')(x)
+    x = LeakyReLU(alpha=0.2)(x)
+
+    x = ZeroPadding2D(padding=(1,1))(x)
+    output = Conv2D(1, (4,4), strides=1, padding='valid', activation='sigmoid')(x)
+
+    return Model(inputs=[input_layer], outputs=[output])
+
+    
 class CycleGAN(object):
     def __init__():
         pass
