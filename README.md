@@ -2,6 +2,14 @@
 ---
 Repository for Google Summer of Code 2019
 ---------------------------------------------
+### Organisation: Tensorflow
+### Mentors
+- Tomer Kaftan ([@tomerk](https://github.com/tomerk))
+- Amit Sabne ([@amitsabne1](https://github.com/amitsabne1))
+- Vikram Tiwari ([@VikramTiwari](https://github.com/VikramTiwari))
+- Katherine Wu ([@k-w-w](https://github.com/k-w-w))
+- Paige Bailey ([dynamicwebpaige](https://github.com/dynamicwebpaige))
+### Tasks
 |Evaluation|Task|Link|Status|Pull Request|
 |---|---|---|---|---|
 |E1|Autoencoder Migration |[Here](https://github.com/Vishal-V/GSoC/tree/master/autoencoder)| Complete |[ #68](https://github.com/tensorflow/examples/pull/68)
@@ -11,4 +19,13 @@ Repository for Google Summer of Code 2019
 |E2|StackGAN Model|[Here](https://github.com/Vishal-V/GSoC/tree/master/stack_gan)| Complete |[ #77](https://github.com/tensorflow/examples/pull/77)
 |E2|Mask R-CNN Migration|[Here](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)|Migration Complete|[ #78](https://github.com/tensorflow/examples/pull/78)|
 |E2|Custom ResNet with TinyImageNet - Part 2 |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Occlusion and Progressive Resizing Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
+|E3|Mask R-CNN - TF 2.0 Model |[Here](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)|Ongoing|[ #78](https://github.com/tensorflow/examples/pull/78)|
+|E3|Custom ResNet with TinyImageNet - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
+|E3|StackGAN - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Ongoing|[ #77](https://github.com/tensorflow/examples/pull/77)|
+### Summary
+Re-building the official Tensorflow models to make it TF 2.0 compatible. This project proposes a holistic improvement to the models repository to upgrade models/research and models/official. The project scope also includes building new deep learning models and features to improve research prototyping with Tensorflow 2.0. Creating model migration guides for the official models will enable onboarding to TF 2.0 with eager mode for R&D and graph mode for serving. 
+  
+The official models (including Mask R-CNN, StackGAN, ResNet) will be upgraded with tf.data pipelines and distributed training with DistributionStrategies. Other improvements include bug fixes and the use of tf.GradientTape to compute the gradients more efficiently using Autodifferentiation. The Variational Autoencoders and the GANs projects will be recreated with TF 2.0 with features to train efficiently and export to deploy.
 #
+### Work Done
+### Improvements
