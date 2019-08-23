@@ -9,8 +9,10 @@
 - Katherine Wu ([@k-w-w](https://github.com/k-w-w))
 - Paige Bailey ([@dynamicwebpaige](https://github.com/dynamicwebpaige))
 ## **Aim**
-<img src="assets/gsoc_project.png" width="850px" height="280px"/>
-  
+Re-building the official Tensorflow models to make it TF 2.0 compatible. This project proposes holistic improvements to the models repository to upgrade models/research and models/official. The project scope also includes building new deep learning models and features to improve research prototyping with Tensorflow 2.0. Creating model migration guides for the official models will enable onboarding to TF 2.0 with eager mode for R&D and graph mode for serving.
+
+The official models (including Mask R-CNN and StackGAN) will be upgraded with tf.data pipelines and distributed training with DistributionStrategies. Other improvements include bug fixes and the use of tf.GradientTape to compute the gradients more efficiently using Autodifferentiation. The Variational Autoencoders and the GANs projects will be recreated with TF 2.0 with features to train efficiently and export to deploy.
+#
 ## **Progress**
 |Evaluation|Task|Link|Status|Pull Request|
 |---|---|---|---|---|
