@@ -8,17 +8,10 @@
 - Vikram Tiwari ([@VikramTiwari](https://github.com/VikramTiwari))
 - Katherine Wu ([@k-w-w](https://github.com/k-w-w))
 - Paige Bailey ([@dynamicwebpaige](https://github.com/dynamicwebpaige))
-<<<<<<< HEAD
 ## **Aim**
 <img src="assets/gsoc_project.png" width="850px" height="280px"/>
   
 ## **Progress**
-=======
-### **Summary**
-<img src="assets/gsoc_project.png" width="850px" height="280px"/>
-  
-### Tasks
->>>>>>> d5c3e61a92defeed7f694d3c3f0e37675d68a32c
 |Evaluation|Task|Link|Status|Pull Request|
 |---|---|---|---|---|
 |E1|Autoencoder Migration |[Here](https://github.com/Vishal-V/GSoC/tree/master/autoencoder)| Complete |[ #68](https://github.com/tensorflow/examples/pull/68)
@@ -32,7 +25,6 @@
 |E3|Custom ResNet - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
 |E3|StackGAN - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Ongoing|[ #77](https://github.com/tensorflow/examples/pull/77)|
 #
-<<<<<<< HEAD
 ## **Work Done**
 ### Autoencoder
 - **Model**: https://github.com/Vishal-V/GSoC/tree/master/autoencoder/model
@@ -59,24 +51,10 @@
 - [**StackGAN**](https://github.com/Vishal-V/GSoC/tree/master/stack_gan) -  [tensorflow/examples #68]()
 - [**StackGAN Notebook**](https://github.com/Vishal-V/GSoC/blob/master/stack_gan/notebook/stack_gan.ipynb) -  [tensorflow/examples #68]()
 - [**Age-cGAN**](https://github.com/Vishal-V/GSoC/tree/master/face_app) -  [tensorflow/examples #68]()
-- **FaceApp Notebook** - [tensorflow/examples #68]() 
+- [**FaceApp Notebook**]() - [tensorflow/examples #68]() 
 - [**Mask R-CNN**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn) -  [tensorflow/examples #68]()
 - [**Mask R-CNN Notebook**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks) -  [tensorflow/examples #68]()
 - [**Hyperparameter Search**](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb) -  [tensorflow/examples #68]()
 ## **What's left?**
 ## **Challenges**
 ## **Learnings**
-=======
-### **Work Done**
-1. [Autoencoder - Migration](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/README.md)
-2. [Autoencoder - Model](https://github.com/Vishal-V/GSoC/tree/master/autoencoder/model)
-3. [Custom ResNet for TinyImageNet - Model](https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model)
-4. [Custom ResNet for TinyImageNet - Notebook](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)
-5. [Mask R-CNN - Migration](https://github.com/Vishal-V/GSoC/blob/master/mask_rcnn/README.md)
-6. [Mask R-CNN - Notebook](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks)
-7. [Mask R-CNN - Model](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)
-8. [StackGAN - Model](https://github.com/Vishal-V/GSoC/tree/master/stack_gan)
-9. [StackGAN - Notebook](https://github.com/Vishal-V/GSoC/blob/master/stack_gan/notebook/stack_gan.ipynb)
-10. [Hyperparameter Search](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb)
-### **Improvements**
->>>>>>> d5c3e61a92defeed7f694d3c3f0e37675d68a32c
