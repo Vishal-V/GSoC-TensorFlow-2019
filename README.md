@@ -1,4 +1,5 @@
 <img src="assets/gsoc.png" width="556px" height="112px"/>
+  
 ## Google Summer of Code 2019: **Final Work Product**
 ---
 ### **Organisation**: Tensorflow
@@ -9,7 +10,8 @@
 - Katherine Wu ([@k-w-w](https://github.com/k-w-w))
 - Paige Bailey ([@dynamicwebpaige](https://github.com/dynamicwebpaige))
 ### **Summary**
-<img src="assets/gsoc_project.png" width="850px" height="380px"/>
+<img src="assets/gsoc_project.png" width="850px" height="280px"/>
+  
 ### Tasks
 |Evaluation|Task|Link|Status|Pull Request|
 |---|---|---|---|---|
@@ -25,14 +27,14 @@
 |E3|StackGAN - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Ongoing|[ #77](https://github.com/tensorflow/examples/pull/77)|
 #
 ### **Work Done**
-- [Autoencoder - Migration](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/README.md)
-- [Autoencoder - Model]()
-- [Hyperparameter Search](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb)
-- [Custom ResNet with TinyImageNet - Model](https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model)
-- [Custom ResNet with TinyImageNet - Notebook](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)
-- [Mask R-CNN - Migration](https://github.com/Vishal-V/GSoC/blob/master/mask_rcnn/README.md)
-- [Mask R-CNN - Notebook](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks)
-- [Mask R-CNN - Model](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)
-- [StackGAN - Model](https://github.com/Vishal-V/GSoC/tree/master/stack_gan)
-- [StackGAN - Notebook](https://github.com/Vishal-V/GSoC/blob/master/stack_gan/notebook/stack_gan.ipynb)
+1. [Autoencoder - Migration](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/README.md)
+2. [Autoencoder - Model](https://github.com/Vishal-V/GSoC/tree/master/autoencoder/model)
+3. [Custom ResNet for TinyImageNet - Model](https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model)
+4. [Custom ResNet for TinyImageNet - Notebook](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)
+5. [Mask R-CNN - Migration](https://github.com/Vishal-V/GSoC/blob/master/mask_rcnn/README.md)
+6. [Mask R-CNN - Notebook](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks)
+7. [Mask R-CNN - Model](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)
+8. [StackGAN - Model](https://github.com/Vishal-V/GSoC/tree/master/stack_gan)
+9. [StackGAN - Notebook](https://github.com/Vishal-V/GSoC/blob/master/stack_gan/notebook/stack_gan.ipynb)
+10. [Hyperparameter Search](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb)
 ### **Improvements**
