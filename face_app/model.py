@@ -136,6 +136,22 @@ def generator():
 
     return Model(inputs=[latent_vector, conditioning_variable], outputs=[x])
 
+
+def face_recognition(shape):
+    """Builds the Face Recognition Network.
+    """
+    model = InceptionResNetV2(include_top=False, weights='imagenet', input_shape=shape, pooling='avg')
+    image = model.input
+    x = model.layers[-1].output
+    outputs = Dense(128)(x)
+    embedding_model = Model(inputs=[image], outputs=[outputs])
+
+    input_layer = Input(shape=shape)
+    x = embedding_model(input_layer)
+    outputs = Lambda(lambda x: tf.keras.backend.l2_normalize(x, -1))(x)
+    return Model(inputs=[input_layer], outputs=[outputs])
+
+
  def expand_dims(label):
     label = tf.keras.backend.expand_dims(label, 1)
     label = tf.keras.backend.expand_dims(label, 1)
@@ -171,13 +187,66 @@ def discriminator():
     return Model(inputs=[images, label], outputs=[x])
 
 
+def adversarial(generator, discriminator):
+    """Builds the Adversarial Network.
+    """
+    latent_space = Input(shape=(100,))
+    conditioning_variable = Input(shape=(6,))
+
+    discriminator.trainable = False
+    reconstructed = generator([latent_space, conditioning_variable])
+    valid = discriminator([reconstructed, conditioning_variable])
+
+    discriminator.trainable = True
+    return Model(inputs=[latent_space, conditioning_variable], outputs=[valid])
+
+
 def run_main(argv):
     del argv
     kwargs = {'path' : DATASET_PATH}
     main(**kwargs)  
 
 def main(path):
+    """The training of the Age-cGAN occurs in 3 steps:
+        1. Training the Generator and Discriminator Networks.
+        2. Initial Latent Vector Approximation (Encoder).
+        3. Latent Vector Optimization (Encoder and Generator).
+    """
+    epochs = 500
+    batch_size = 128
+    TRAIN_GAN = True # Step 1
+    TRAIN_ENCODER = False # Step 2
+    TRAIN_ENC_GAN = False # Step 3
+    latent_shape = 100
+    image_shape = (64, 64, 3)
+    fr_image_shape = (192, 192, 3)
+    gen_opt = tf.keras.optimizers.Adam(lr=0.002, beta_1=0.5, beta_2=0.999, epsilon=10e-8)
+    dis_opt = tf.keras.optimizers.Adam(lr=0.002, beta_1=0.5, beta_2=0.999, epsilon=10e-8)
+    adv_opt = tf.keras.optimizers.Adam(lr=0.002, beta_1=0.5, beta_2=0.999, epsilon=10e-8)
+
+    generator = generator()
+    generator.compile(loss='binary_crossentropy', optimizer=gen_opt)
+
+    discriminator = discriminator()
+    discriminator.compile(loss='binary_crossentropy', optimizer=dis_opt)
+
+    adversarial = adversarial(generator, discriminator)
+    adversarial.compile(loss='binary_crossentropy', optimizer=adv_opt)
+
     images, age_list = load_data(path)
+    categories = # TODO: Age categories function
+    age_categories = np.reshape()
+    num_classes = len(set(categories))
+    y = to_categorical(age_categories, num_classes=num_classes)
+
+    loaded_images = # TODO: Load images
+
+    real = np.ones((batch_size, 1), dtype=np.float32) * 0.9
+    fake = np.zeros((batch_size, 1), dtype=np.float32) * 0.1
+
+    # Train Step 1: Train the Generator and Discriminator
+    # Train Step 2: Train the Encoder
+    # Train Step 3: Train the Generator and Encoder and Generator
 
 if __name__ == '__main__':
     app.run(run_main)
