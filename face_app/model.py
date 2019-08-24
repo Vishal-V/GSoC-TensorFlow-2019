@@ -13,121 +13,171 @@
 # limitations under the License.
 # ==============================================================================
 """Age-cGAN Model.
+
+Dataset Citation:
+@article{Rothe-IJCV-2016,
+  author = {Rasmus Rothe and Radu Timofte and Luc Van Gool},
+  title = {Deep expectation of real and apparent age from a single image without facial landmarks},
+  journal = {International Journal of Computer Vision (IJCV)},
+  year = {2016},
+  month = {July},
+}
 """
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 from absl import app
 import numpy as np
 import tensorflow as tf
 assert tf.__version__.startswith('2.')
 
+from scipy.io import loadmat
+from datetime import datetime
 from tensorflow.keras import Input, Model
+from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Dense, Upsampling2D, Conv2D, Activation, BatchNormalization
 from tensorflow.keras.layers import Conv2DTranspose, add, ZeroPadding2D, LeakyReLU
+from tensorflow.keras.layers import Lambda, Reshape, Flatten, concatenate, Dropout
 
-DATASET_PATH = ''
-IMG_WIDTH = 128
-IMG_HEIGHT = 128
-AUTOTUNE = tf.data.experimental.AUTOTUNE
+DATASET_PATH = "./wiki_crop/"
 
-class InstanceNormalization(tf.keras.layers.Layer):
-    def __init__(self, epsilon=1e-5):
-        super(InstanceNormalization, self).__init__()
-        self.epsilon = epsilon
-
-    def build(self, shape):
-        self.scale = self.add_weight(name='scale', shape=shape[-1:], initializer=tf.keras.initializers.RandomNormal(0.0, 0.002), trainable=True)
-        self.offset = self.add_weight(name='offset', shape=shape[-1:], initializer='zeros', trainable=True)
-
-    def call(self, inputs):
-        mean, variance = tf.nn.moments(inputs, axis=1, keepdims=True)
-        inv = tf.math.rsqrt(variance + self.epsilon)
-        x = (inputs - mean) * inv
-        return self.scale * x + self.offset
+def compute_age(photo_date, dob):
+    """Calculates the age from the dob and the date of photo taken.
+    """
+    birth = datetime.fromordinal(max(int(dob) - 366, 1))
+    if birth.month < 7:
+        return photo_date - birth.year
+    else:
+        return photo_date - birth.year - 1
 
 def load_data(path):
-    pass
-
-def build_generator():
-    """An Autoencoder network.
+    """Loads the image paths and the calculated ages for each photo. 
     """
-    # Convolution Block
-    input_layer1 = Input(shape=(128, 128, 3))
-    x = Conv2D(32, (7,7), strides=1, padding='same', use_bias=False)(input_layer1)
-    x = InstanceNormalization()(x)
-    x = Activation('relu')(x)
+    metadata = loadmat(os.path.join(path, "wiki.mat"))
+    paths = metadata['wiki'][0, 0]['full_path'][0]
+    dob = meta['wiki'][0, 0]['dob'][0]
+    photo_date = metadata['wiki'][0, 0]['photo_taken'][0]
+    calculated_age = [compute_age(photo_date[i], dob[i]) for i in range(len(dob))]
 
-    x = Conv2D(64, (3,3), strides=2, padding='same', use_bias=False)(x)
-    x = InstanceNormalization()(x)
-    x = Activation('relu')(x)
+    images = []
+    ages_list = []
 
-    x = Conv2D(128, (3,3), strides=2, padding='same', use_bias=False)(x)
-    x = InstanceNormalization()(x)
-    x = Activation('relu')(x)
-      
-    # Residual block.
-    x1 = Conv2D(128, (3,3), strides=1, padding='same', use_bias=False)(x)
-    x1 = BatchNormalization(axis=3, momentum=0.9, epsilon=1e-5)(x1)
-    x1 = Conv2D(128, (3,3), strides=1, padding='same', use_bias=False)(x1)
-    x1 = BatchNormalization(axis=3, momentum=0.9, epsilon=1e-5)(x1)
-    x = add()([x, x1])
+    for i, image_path in enumerate(paths):
+        images.append(image_path[0])
+        ages_list.append(calculated_age[i])
 
-    # Upsampling block.
-    x = Conv2DTranspose(64, (3,3), strides=2, padding='same', use_bias=False)(x)
-    x = InstanceNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(32, (3,3), strides=2, padding='same', use_bias=False)(x)
-    x = InstanceNormalization()(x)
-    x = Activation('relu')(x)
+    return images, ages_list
 
-    output = Conv2D(3, (7,7), strides=1, padding='same', activation='tanh', use_bias=False)(x)
+def encoder():
+    """Builds the Encoder network.
+    """
+    input_layer = Input(shape=(64, 64, 3))
+    x = Conv2D(32, (5,5), strides=2, padding='same')(input_layer)
+    x = LeakyReLU(0.2)(x)
 
-    return Model(inputs=[input_layer1], outputs=[output])
+    x = Conv2D(64, (5,5), strides=2, padding='same')(input_layer)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
 
-def build_discriminator():
-    input_layer = Input(shape=(128, 128, 3))
-    x = ZeroPadding2D(padding=(1,1))(input_layer)
-    x = Conv2D(64, (4,4), strides=2, padding='valid')(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = Conv2D(128, (5,5), strides=2, padding='same')(input_layer)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
 
-    x = ZeroPadding2D(padding=(1,1))(x)
-    x = InstanceNormalization()(x)
-    x = Conv2D(128, (4,4), strides=2, padding='valid')(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = Conv2D(256, (5,5), strides=2, padding='same')(input_layer)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
 
-    x = ZeroPadding2D(padding=(1,1))(x)
-    x = InstanceNormalization()(x)
-    x = Conv2D(256, (4,4), strides=2, padding='valid')(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = Flatten()(x)
+    x = Dense(4096)(x)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
+    x = Dense(100)(x)
 
-    x = ZeroPadding2D(padding=(1,1))(x)
-    x = InstanceNormalization()(x)
-    x = Conv2D(512, (4,4), strides=2, padding='valid')(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    return Model(inputs=[input_layer], outputs=[x])
 
-    x = ZeroPadding2D(padding=(1,1))(x)
-    output = Conv2D(1, (4,4), strides=1, padding='valid', activation='sigmoid')(x)
 
-    return Model(inputs=[input_layer], outputs=[output])
+def generator():
+    """Builds the Generator network.
+    """
+    latent_vector = Input(shape=(100,))
+    conditioning_variable = Input(shape=(6,))
 
+    x = concatenate([latent_vector, conditioning_variable])
+
+    x = Dense(20148, input_dim=106)(x)
+    x = LeakyReLU(0.2)(x)
+    x = Dropout(0.2)(x)
+
+    x = Dense(16384)(x)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
+    x = Dropout(0.2)(x)
+
+    x = Reshape((8, 8, 256))(x)
+
+    x = Upsampling2D(size=(2,2))(x)
+    x = Conv2D(128, (5,5), padding='same')(x)
+    x = BatchNormalization(momentum=0.8)(x)
+    x = LeakyReLU(0.2)(x)
+
+    x = Upsampling2D(size=(2,2))(x)
+    x = Conv2D(64, (5,5), padding='same')(x)
+    x = BatchNormalization(momentum=0.8)(x)
+    x = LeakyReLU(0.2)(x)
+
+    x = Upsampling2D(size=(2,2))(x)
+    x = Conv2D(64, (5,5), padding='same')(x)
+    x = Activation('tanh')(x)
+
+    return Model(inputs=[latent_vector, conditioning_variable], outputs=[x])
+
+ def expand_dims(label):
+    label = tf.keras.backend.expand_dims(label, 1)
+    label = tf.keras.backend.expand_dims(label, 1)
+    return tf.keras.backend.tile(label, [1, 32, 32, 1])
+
+def discriminator():
+    """Builds the Discriminator network.
+    """
+    image = Input(shape=(64, 64, 3))
+    label = Input(shape=(6,))
+
+    x = Conv2D(64, (3,3), strides=2, padding='same')(image)
+    x = LeakyReLU(0.2)(x)
+
+    label = Lambda(expand_dims)(label)
     
-class CycleGAN(object):
-    def __init__():
-        pass
+    x = concatenate([x, label], axis=3)
+    x = Conv2D(128, (3,3), strides=2, padding='same')(x)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
 
-    def train():
-        pass
-        
+    x = Conv2D(256, (3,3), strides=2, padding='same')(x)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
+
+    x = Conv2D(512, (3,3), strides=2, padding='same')(x)
+    x = BatchNormalization()(x)
+    x = LeakyReLU(0.2)(x)
+
+    x = Flatten()(x)
+    x = Dense(1, activation='sigmoid')(x)
+
+    return Model(inputs=[images, label], outputs=[x])
+
+
 def run_main(argv):
     del argv
     kwargs = {'path' : DATASET_PATH}
-    main(**kwargs)
+    main(**kwargs)  
 
 def main(path):
-    pass
+    images, age_list = load_data(path)
 
 if __name__ == '__main__':
     app.run(run_main)
