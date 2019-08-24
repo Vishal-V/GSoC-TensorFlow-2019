@@ -15,6 +15,10 @@
 """StackGAN.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import pickle
 import random
@@ -518,7 +522,7 @@ class StackGanStage1(object):
 		stage1_generator_lr: Learning rate for stage 1 generator
 		stage1_discriminator_lr: Learning rate for stage 1 discriminator
 	"""
-	def __init__(self, epochs=100, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
+	def __init__(self, epochs=500, z_dim=100, batch_size=64, enable_function=True, stage1_generator_lr=0.0002, stage1_discriminator_lr=0.0002):
 		self.epochs = epochs
 		self.z_dim = z_dim
 		self.enable_function = enable_function
@@ -662,14 +666,19 @@ class StackGanStage2(object):
 		self.stage1_generator.load_weights('stage1_gen.h5')
 		self.stage2_generator = build_stage2_generator()
 		self.stage2_generator.compile(loss='binary_crossentropy', optimizer=self.stage2_generator_optimizer)
+		# self.stage2_generator.load_weights('stage2_gen.h5')
 		self.stage2_discriminator = build_stage2_discriminator()
 		self.stage2_discriminator.compile(loss='binary_crossentropy', optimizer=self.stage2_discriminator_optimizer)
+		# self.stage2_discriminator.load_weights('stage2_disc.h5')
 		self.ca_network = build_ca_network()
 		self.ca_network.compile(loss='binary_crossentropy', optimizer='Adam')
+		# self.ca_network.load_weights('stage2_ca.h5')
 		self.embedding_compressor = build_embedding_compressor()
 		self.embedding_compressor.compile(loss='binary_crossentropy', optimizer='Adam')
+		# self.embedding_compressor.load_weights('stage2_embco.h5')
 		self.stage2_adversarial = stage2_adversarial_network(self.stage2_discriminator, self.stage2_generator, self.stage1_generator)
 		self.stage2_adversarial.compile(loss=['binary_crossentropy', adversarial_loss], loss_weights=[1, 2.0], optimizer=self.stage2_generator_optimizer)	
+		# self.stage2_adversarial.load_weights('stage2_adv.h5')
 		self.checkpoint2 = tf.train.Checkpoint(
         	generator_optimizer=self.stage2_generator_optimizer,
         	discriminator_optimizer=self.stage2_discriminator_optimizer,
@@ -747,6 +756,20 @@ class StackGanStage2(object):
 				if epoch % 5 == 0:
 					latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
 
+		            embedding_batch = high_test_embeds[0 : self.batch_size]
+
+		            low_fake_images, _ = self.stage1_generator.predict([embedding_batch, latent_space], verbose=3)
+		            high_fake_images, _ = self.stage2_generator.predict([embedding_batch, low_fake_images], verbose=3)
+
+		            for i, image in enumerate(high_fake_images[:10]):
+		                save_image(image, f'results_stage2/gen_{epoch}_{i}.png')
+
+				if epoch % 10 == 0:
+					self.stage2_generator.save_weights('stage2_gen.h5')
+					self.stage2_discriminator.save_weights("stage2_disc.h5")
+					self.ca_network.save_weights('stage2_ca.h5')
+					self.embedding_compressor.save_weights('stage2_embco.h5')
+					self.stage2_adversarial.save_weights('stage2_adv.h5')
 
 		self.stage2_generator.save_weights('stage2_gen.h5')
 		self.stage2_discriminator.save_weights("stage2_disc.h5")
@@ -768,5 +791,5 @@ if __name__ == '__main__':
 	stage1 = StackGanStage1()
 	stage1.train_stage1()
 
-	# stage2 = StackGanStage2()
-	# stage2.train_stage2()
+	stage2 = StackGanStage2()
+	stage2.train_stage2()
