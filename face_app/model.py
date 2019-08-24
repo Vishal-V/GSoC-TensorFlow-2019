@@ -28,7 +28,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
+import os
 from absl import app
 import numpy as np
 import tensorflow as tf
@@ -39,11 +39,12 @@ from datetime import datetime
 from tensorflow.keras import Input, Model
 from tensorflow.keras.applications import InceptionResNetV2
 from tensorflow.keras.preprocessing import image
-import tensorflow.keras.backend as K
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.layers import Dense, Upsampling2D, Conv2D, Activation, BatchNormalization
+from tensorflow.keras.layers import Dense, UpSampling2D, Conv2D, Activation, BatchNormalization
 from tensorflow.keras.layers import Conv2DTranspose, add, ZeroPadding2D, LeakyReLU
 from tensorflow.keras.layers import Lambda, Reshape, Flatten, concatenate, Dropout
+import tensorflow.keras.backend as K
+import matplotlib.pyplot as plt
 
 DATASET_PATH = "./wiki_crop/"
 
@@ -61,7 +62,7 @@ def load_data(path):
     """
     metadata = loadmat(os.path.join(path, "wiki.mat"))
     paths = metadata['wiki'][0, 0]['full_path'][0]
-    dob = meta['wiki'][0, 0]['dob'][0]
+    dob = metadata['wiki'][0, 0]['dob'][0]
     photo_date = metadata['wiki'][0, 0]['photo_taken'][0]
     calculated_age = [compute_age(photo_date[i], dob[i]) for i in range(len(dob))]
 
@@ -74,7 +75,7 @@ def load_data(path):
 
     return images, ages_list
 
-def encoder():
+def make_encoder():
     """Builds the Encoder network.
     """
     input_layer = Input(shape=(64, 64, 3))
@@ -102,7 +103,7 @@ def encoder():
     return Model(inputs=[input_layer], outputs=[x])
 
 
-def generator():
+def make_generator():
     """Builds the Generator network.
     """
     latent_vector = Input(shape=(100,))
@@ -110,7 +111,7 @@ def generator():
 
     x = concatenate([latent_vector, conditioning_variable])
 
-    x = Dense(20148, input_dim=106)(x)
+    x = Dense(2048, input_dim=106)(x)
     x = LeakyReLU(0.2)(x)
     x = Dropout(0.2)(x)
 
@@ -121,24 +122,24 @@ def generator():
 
     x = Reshape((8, 8, 256))(x)
 
-    x = Upsampling2D(size=(2,2))(x)
+    x = UpSampling2D(size=(2,2))(x)
     x = Conv2D(128, (5,5), padding='same')(x)
     x = BatchNormalization(momentum=0.8)(x)
     x = LeakyReLU(0.2)(x)
 
-    x = Upsampling2D(size=(2,2))(x)
+    x = UpSampling2D(size=(2,2))(x)
     x = Conv2D(64, (5,5), padding='same')(x)
     x = BatchNormalization(momentum=0.8)(x)
     x = LeakyReLU(0.2)(x)
 
-    x = Upsampling2D(size=(2,2))(x)
-    x = Conv2D(64, (5,5), padding='same')(x)
+    x = UpSampling2D(size=(2,2))(x)
+    x = Conv2D(3, (5,5), padding='same')(x)
     x = Activation('tanh')(x)
 
     return Model(inputs=[latent_vector, conditioning_variable], outputs=[x])
 
 
-def face_recognition(shape):
+def make_face_recognition(shape):
     """Builds the Face Recognition Network.
     """
     model = InceptionResNetV2(include_top=False, weights='imagenet', input_shape=shape, pooling='avg')
@@ -160,21 +161,21 @@ def save_image(img, path):
     plt.savefig(path)
     plt.close()
 
- def expand_dims(label):
+def expand_dims(label):
     label = tf.keras.backend.expand_dims(label, 1)
     label = tf.keras.backend.expand_dims(label, 1)
     return tf.keras.backend.tile(label, [1, 32, 32, 1])
 
-def discriminator():
+def make_discriminator():
     """Builds the Discriminator network.
     """
-    image = Input(shape=(64, 64, 3))
-    label = Input(shape=(6,))
+    image_input = Input(shape=(64, 64, 3))
+    label_input = Input(shape=(6,))
 
-    x = Conv2D(64, (3,3), strides=2, padding='same')(image)
+    x = Conv2D(64, (3,3), strides=2, padding='same')(image_input)
     x = LeakyReLU(0.2)(x)
 
-    label = Lambda(expand_dims)(label)
+    label = Lambda(expand_dims)(label_input)
     
     x = concatenate([x, label], axis=3)
     x = Conv2D(128, (3,3), strides=2, padding='same')(x)
@@ -192,10 +193,10 @@ def discriminator():
     x = Flatten()(x)
     x = Dense(1, activation='sigmoid')(x)
 
-    return Model(inputs=[images, label], outputs=[x])
+    return Model(inputs=[image_input, label_input], outputs=[x])
 
 
-def adversarial(generator, discriminator):
+def make_adversarial(generator, discriminator):
     """Builds the Adversarial Network.
     """
     latent_space = Input(shape=(100,))
@@ -241,10 +242,10 @@ def load_images(path, image_paths, shape):
             if image_ is None:
                 image_ = image
             else:
-                image_ = np.concat([image_, image], axis=0)
+                image_ = np.concatenate([image_, image], axis=0)
 
-        except Excepion as e:
-            print(f'Error! Image {i}{e}')
+        except Exception as e:
+            print(f'Error! Image {i} {e}')
 
     return image_
 
@@ -274,13 +275,13 @@ def main(path):
     dis_opt = tf.keras.optimizers.Adam(lr=0.002, beta_1=0.5, beta_2=0.999, epsilon=10e-8)
     adv_opt = tf.keras.optimizers.Adam(lr=0.002, beta_1=0.5, beta_2=0.999, epsilon=10e-8)
 
-    generator = generator()
+    generator = make_generator()
     generator.compile(loss='binary_crossentropy', optimizer=gen_opt)
 
-    discriminator = discriminator()
+    discriminator = make_discriminator()
     discriminator.compile(loss='binary_crossentropy', optimizer=dis_opt)
 
-    adversarial = adversarial(generator, discriminator)
+    adversarial = make_adversarial(generator, discriminator)
     adversarial.compile(loss='binary_crossentropy', optimizer=adv_opt)
 
     images, age_list = load_data(path)
@@ -302,7 +303,7 @@ def main(path):
 
             num_batches = int(len(loaded_images)/batch_size)
             for i in range(num_batches):
-                batch = load_images[i*batch_size:(i+1)*batch_size]
+                batch = loaded_images[i*batch_size:(i+1)*batch_size]
                 batch = batch / 127.5 - 1.
                 batch = batch.astype(np.float32)
 
@@ -314,7 +315,7 @@ def main(path):
                 d_recons = discriminator.train_on_batch([reconstructed, y_curr], [fake])
                 d_curr = 0.5 * np.add(d_real, d_recons)
 
-                latent_space = np.random.normal(0, 1, shape=(batch_size, 100))
+                latent_space = np.random.normal(0, 1, size=(batch_size, 100))
                 conditioning_variable = np.random.randint(0, 6, batch_size).reshape(-1, 1)
                 conditioning_variable = to_categorical(conditioning_variable, num_classes=6)
 
@@ -322,12 +323,12 @@ def main(path):
                 print(f'Gen_loss:{g_curr}\nDisc_loss:{d_curr}')
 
             if epoch % 10 == 0:
-                mini_batch = load_images[:batch_size]
+                mini_batch = loaded_images[:batch_size]
                 mini_batch = mini_batch / 127.5 - 1.
                 mini_batch = mini_batch.astype(np.float32)
 
                 y_batch = y[:batch_size]
-                latent_space = np.random.normal(0, 1, size=(batch_size, y_mini_batch))
+                latent_space = np.random.normal(0, 1, size=(batch_size, y_batch))
 
                 gen = generator.predict_on_batch([latent_space, y_batch])
 
@@ -346,13 +347,13 @@ def main(path):
     # Train Step 2: Train the Encoder
     if TRAIN_ENCODER:
         print(f'Step 2: Training the Encoder - Latent Vector Approximation')
-        encoder = encoder()
+        encoder = make_encoder()
         encoder.compile(loss=euclidean_loss, optimizer='adam')
 
         generator.load_weights('generator.h5')
         
-        latent_vector = np.random.normal(0, 1, shape=(5000, 100))
-        y = np.random.randint(0, 6, size=(5000,), dtype=np.nt64)
+        latent_vector = np.random.normal(0, 1, size=(5000, 100))
+        y = np.random.randint(0, 6, size=(5000,), dtype=np.int64)
         num_classes = len(set(y))
         y = np.reshape(np.array(y), [len(y), 1])
         y = to_categorical(y, num_classes=num_classes)
