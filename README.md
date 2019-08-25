@@ -23,7 +23,7 @@ The official models (including Mask R-CNN and StackGAN) will be upgraded with tf
 |E2|StackGAN Model|[Here](https://github.com/Vishal-V/GSoC/tree/master/stack_gan)| Complete |[ #77](https://github.com/tensorflow/examples/pull/77)
 |E2|Mask R-CNN Migration|[Here](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)|Migration Guide|[ #78](https://github.com/tensorflow/examples/pull/78)|
 |E2|Custom ResNet - Part 2 |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
-|E3|Face Aging - Model |[Here](https://github.com/Vishal-V/GSoC/blob/master/face_app/model.py)|Complete|[ #]()|
+|E3|Face Aging - Model |[Here](https://github.com/Vishal-V/GSoC/blob/master/face_app/model.py)|Complete|[ #83](https://github.com/tensorflow/examples/pull/83)|
 |E3|Custom ResNet - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
 |E1|Autoencoder - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/notebook/autoencoder.ipynb)| Complete |[ #68](https://github.com/tensorflow/examples/pull/68)|
 |E3|StackGAN - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Ongoing|[ #77](https://github.com/tensorflow/examples/pull/77)|
@@ -42,7 +42,6 @@ The official models (including Mask R-CNN and StackGAN) will be upgraded with tf
 - **Notebook**: [GitHub Link](), [Colab Link]()
 ### Age-cGAN
 - **Model**: https://github.com/Vishal-V/GSoC/tree/master/face_app
-- **Notebook**: [GitHub Link](), [Colab Link]()
 ### Hyperparameter Tuning
 - **Notebook**: [GitHub Link](), [Colab Link]()
 ### Mask R-CNN [WIP]
@@ -51,16 +50,15 @@ The official models (including Mask R-CNN and StackGAN) will be upgraded with tf
 - **Notebook**: [GitHub Link](), [Colab Link]()
 
 ## **Deliverables**
-- [**Autoencoder**](https://github.com/Vishal-V/GSoC/tree/master/autoencoder/model) - [tensorflow/examples #68]()
-- [**StackGAN**](https://github.com/Vishal-V/GSoC/tree/master/stack_gan) -  [tensorflow/examples #77]()
+- [**Autoencoder**](https://github.com/Vishal-V/GSoC/tree/master/autoencoder/model) - [tensorflow/examples #68](https://github.com/tensorflow/examples/pull/68)
+- [**StackGAN**](https://github.com/Vishal-V/GSoC/tree/master/stack_gan) -  [tensorflow/examples #77](https://github.com/tensorflow/examples/pull/77)
 - [**StackGAN Notebook**](https://github.com/Vishal-V/GSoC/blob/master/stack_gan/notebook/stack_gan.ipynb) -  [tensorflow/examples #77]()
-- [**Age-cGAN**](https://github.com/Vishal-V/GSoC/tree/master/face_app) -  [tensorflow/examples #83]()
-- [**FaceApp Notebook**]() - [tensorflow/examples #]() 
-- [**Mask R-CNN**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn) -  [tensorflow/examples #78]()
-- [**Mask R-CNN Notebook**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks) -  [tensorflow/examples #78]()
-- [**Hyperparameter Search**](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb) -  [tensorflow/examples #84]()
-- [**Custom ResNet for TinyImageNet**](https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model) -  [tensorflow/examples #79]()
-- [**Custom ResNet for TinyImageNet Notebook**](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb) -  [tensorflow/examples #79]()
+- [**Age-cGAN**](https://github.com/Vishal-V/GSoC/tree/master/face_app) -  [tensorflow/examples #83](https://github.com/tensorflow/examples/pull/83)
+- [**Mask R-CNN**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn) -  [tensorflow/examples #78](https://github.com/tensorflow/examples/pull/78)
+- [**Mask R-CNN Notebook**](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn/notebooks) -  [tensorflow/examples #78](https://github.com/tensorflow/examples/pull/78)
+- [**Hyperparameter Search**](https://github.com/Vishal-V/GSoC/blob/master/keras_tuner/hyperparamter_search.ipynb) -  [tensorflow/examples #84](https://github.com/tensorflow/examples/pull/84)
+- [**Custom ResNet for TinyImageNet**](https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model) -  [tensorflow/examples #79](https://github.com/tensorflow/examples/pull/79)
+- [**Custom ResNet for TinyImageNet Notebook**](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb) -  [tensorflow/examples #79](https://github.com/tensorflow/examples/pull/79)
 ## **Progress**
 All pull requests can be found here [PRs Link](https://github.com/tensorflow/examples/pulls/Vishal-V)
 - **Phase 1**
