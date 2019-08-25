@@ -1,6 +1,15 @@
 # StackGAN
 ### Text to Photo-Realistic Image Synthesis
 ---
+#### Dependencies
+```
+tensorflow==2.0.0b1
+numpy==1.16.4
+absl_py==0.7.0
+matplotlib==2.2.3
+pandas==0.23.4
+Pillow==6.1.0
+```
 #### Downloads
 - To download all the dependencies, simply execute 
 ```
@@ -10,16 +19,18 @@ pip install -r requirements.txt
 ```
 python data_download.py
 ```
-- Download the Char-RNN-CNN embeddings from this link: [**download link**](https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE) and unzip it. 
+- Download the Char-RNN-CNN embeddings from this link: [**download link**](https://drive.google.com/file/d/0B3y_msrWZaXLT1BZdVdycDY5TEE) and unzip it in place. 
 ```
 unzip birds.zip
 ```
-#### Run the model
-- The `model.py` file contains the bare minimum code to run the stage 1 and stage 2 architecture. It automatically stores the weights after the specified/default number of epochs have completed.
+#### Training
+- The `model.py` file contains the bare minimum code to run the stage 1 and stage 2 architecture. It automatically stores the weights after the specified/default number of epochs have completed. Note that the weights will be stored at the same directory level as `model.py`.
 ```
-python main.py
+python model.py
 ```
 #### Architecture
+<img src="assets/stackgan_framework.jpg" width="850px" height="370px"/>
+
 - Stage 1
 	- Text Encoder Network
 		- Text description to a 1024 dimensional text embedding

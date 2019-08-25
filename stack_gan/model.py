@@ -766,14 +766,13 @@ class StackGanStage2(object):
 
 				if epoch % 5 == 0:
 					latent_space = np.random.normal(0, 1, size=(self.batch_size, self.z_dim))
+					embedding_batch = high_test_embeds[0 : self.batch_size]
 
-		            embedding_batch = high_test_embeds[0 : self.batch_size]
+					low_fake_images, _ = self.stage1_generator.predict([embedding_batch, latent_space], verbose=3)
+					high_fake_images, _ = self.stage2_generator.predict([embedding_batch, low_fake_images], verbose=3)
 
-		            low_fake_images, _ = self.stage1_generator.predict([embedding_batch, latent_space], verbose=3)
-		            high_fake_images, _ = self.stage2_generator.predict([embedding_batch, low_fake_images], verbose=3)
-
-		            for i, image in enumerate(high_fake_images[:10]):
-		                save_image(image, f'results_stage2/gen_{epoch}_{i}.png')
+					for i, image in enumerate(high_fake_images[:10]):
+					    save_image(image, f'results_stage2/gen_{epoch}_{i}.png')
 
 				if epoch % 10 == 0:
 					self.stage2_generator.save_weights('stage2_gen.h5')
