@@ -162,9 +162,19 @@ def save_image(img, path):
     plt.close()
 
 def expand_dims(label):
+    """Increases dimensions along the specified axis.
+    """
     label = tf.keras.backend.expand_dims(label, 1)
     label = tf.keras.backend.expand_dims(label, 1)
     return tf.keras.backend.tile(label, [1, 32, 32, 1])
+
+def make_resize():
+    """Returns the image resize model.
+    """
+    input_image = Input(shape=(64, 64, 3))
+    resized_image = Lambda(lambda x: K.resize_images(x, height_factor=3, width_factor=3,
+                                    data_format='channels_last'))(input_image)
+    return Model(inputs=[input_image], outputs=[resized_image])
 
 def make_discriminator():
     """Builds the Discriminator network.
@@ -252,6 +262,14 @@ def load_images(path, image_paths, shape):
 def euclidean_loss(y_true, y_pred):
     return K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1))
 
+def resize(input_image, real_image, height, width):
+  input_image = tf.image.resize(input_image, [height, width],
+                                method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+  real_image = tf.image.resize(real_image, [height, width],
+                               method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+  return input_image, real_image
+
 def run_main(argv):
     del argv
     kwargs = {'path' : DATASET_PATH}
@@ -263,11 +281,11 @@ def main(path):
         2. Initial Latent Vector Approximation (Encoder).
         3. Latent Vector Optimization (Encoder and Generator).
     """
-    epochs = 500
-    batch_size = 128
+    epochs = 250
+    batch_size = 128 # Change to 1 in case of ConcatOp error
     TRAIN_GAN = True # Step 1
-    TRAIN_ENCODER = False # Step 2
-    TRAIN_ENC_GAN = False # Step 3
+    TRAIN_ENCODER = True # Step 2
+    TRAIN_ENC_GAN = True # Step 3
     latent_shape = 100
     image_shape = (64, 64, 3)
     fr_image_shape = (192, 192, 3)
@@ -320,7 +338,7 @@ def main(path):
                 conditioning_variable = to_categorical(conditioning_variable, num_classes=6)
 
                 g_curr = adversarial.train_on_batch([latent_space, conditioning_variable], [1]*batch_size)
-                print(f'Gen_loss:{g_curr}\nDisc_loss:{d_curr}')
+            print(f'Gen_loss:{g_curr}\nDisc_loss:{d_curr}')
 
             if epoch % 10 == 0:
                 mini_batch = loaded_images[:batch_size]
@@ -348,10 +366,10 @@ def main(path):
     if TRAIN_ENCODER:
         print(f'Step 2: Training the Encoder - Latent Vector Approximation')
         encoder = make_encoder()
-        encoder.compile(loss=euclidean_loss, optimizer='adam')
+        encoder.compile(loss=euclidean_loss, optimizer=tf.keras.optimizers.Adam())
 
         generator.load_weights('generator.h5')
-        
+                
         latent_vector = np.random.normal(0, 1, size=(5000, 100))
         y = np.random.randint(0, 6, size=(5000,), dtype=np.int64)
         num_classes = len(set(y))
@@ -370,7 +388,7 @@ def main(path):
                 reconstructed = generator.predict_on_batch([latent_batch, y_batch])
                 e_loss = encoder.train_on_batch(reconstructed, latent_batch)
 
-                print(f'Encoder_loss: {e_loss}')
+            print(f'Encoder_loss: {e_loss}')
 
             if epoch % 25 == 0:
                 encoder.save_weights('encoder.h5')
@@ -379,7 +397,54 @@ def main(path):
 
     # Train Step 3: Train the Generator and Encoder and Generator
     if TRAIN_ENC_GAN:
-        pass
+        print(f'Step 3: Training the Generator and Encoder. Latent Vector Optimization')
+        encoder = make_encoder()
+        encoder.load_weights('encoder.h5')
+        generator = make_generator()
+        generator.load_weights('generator.h5')
+        resize_model = make_resize()
+        resize_model.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam())
+
+        face_rec = make_face_recognition()
+        face_rec.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam())
+        face_rec.trainable = False
+
+        image_input = Input(shape=(64, 64, 3))
+        conditioning_variable = Input(shape=(6,))
+
+        latent_approximation = encoder(image_input)
+        reconstruction = generator([latent_approximation, conditioning_variable])
+
+        # fr_resized_images = tf.image.resize(reconstruction, [192, 192], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        fr_resized_images = Lambda(lambda x: K.resize_images(x, height_factor=3, width_factor=3,
+                                                          data_format='channels_last'))(reconstruction)
+        embeddings = face_rec(fr_resized_images)
+
+        fr_adversarial = Model(inputs=[image_input, conditioning_variable], outputs=[embeddings])
+        fr_adversarial.compile(loss=euclidean_loss, optimizer=adv_opt)
+
+        for epoch in range(epochs):
+            print(f'Epoch: {epoch}')
+
+            num_batches = int(len(loaded_images)/batch_size)
+            for i in range(num_batches):
+                batch = loaded_images[i*batch_size:(i+1)*batch_size]
+                batch = batch / 127.5 - 1.
+                batch = batch.astype(np.float32)
+                y_batch = y[i*batch_size:(i+1)*batch_size]
+
+                resized_image_batch = resize_model.predict_on_batch([batch])
+                embeds = face_rec.predict_on_batch([resized_image_batch])
+                loss = fr_adversarial.train_on_batch([batch, y_batch], embeds)
+
+            print(f'Reconstruction Loss: {loss}')
+
+            if epoch % 10 == 0:
+                generator.save_weights('opt_generator.h5')
+                encoder.save_weights('opt_encoder.h5')
+
+        generator.save_weights('opt_generator.h5')
+        encoder.save_weights('opt_encoder.h5')
 
 if __name__ == '__main__':
     app.run(run_main)
