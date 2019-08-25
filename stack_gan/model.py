@@ -87,7 +87,8 @@ def UpSamplingBlock(x, num_kernels):
 		x: The final activation layer after the Upsampling block.
 	"""
 	x = UpSampling2D(size=(2,2))(x)
-	x = Conv2D(num_kernels, kernel_size=(3,3), padding='same', strides=1, use_bias=False)(x)
+	x = Conv2D(num_kernels, kernel_size=(3,3), padding='same', strides=1, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 	return x
@@ -117,7 +118,8 @@ def build_stage1_generator():
 	x = UpSamplingBlock(x, 128)
 	x = UpSamplingBlock(x, 64)
 
-	x = Conv2D(3, kernel_size=3, padding='same', strides=1, use_bias=False)(x)
+	x = Conv2D(3, kernel_size=3, padding='same', strides=1, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = Activation('tanh')(x)
 
 	stage1_gen = Model(inputs=[input_layer1, input_layer2], outputs=[x, ca])
@@ -138,7 +140,8 @@ def ConvBlock(x, num_kernels, kernel_size=(4,4), strides=2, activation=True):
 	Returns:
 		x: The final activation layer after the ConvBlock block.
 	"""
-	x = Conv2D(num_kernels, kernel_size=kernel_size, padding='same', strides=strides, use_bias=False)(x)
+	x = Conv2D(num_kernels, kernel_size=kernel_size, padding='same', strides=strides, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	
 	if activation:
@@ -164,7 +167,8 @@ def build_stage1_discriminator():
 	"""
 	input_layer1 = Input(shape=(64, 64, 3))
 
-	x = Conv2D(64, kernel_size=(4,4), strides=2, padding='same', use_bias=False)(input_layer1)
+	x = Conv2D(64, kernel_size=(4,4), strides=2, padding='same', use_bias=False,
+				kernel_initializer='he_uniform')(input_layer1)
 	x = LeakyReLU(alpha=0.2)(x)
 
 	x = ConvBlock(x, 128)
@@ -175,7 +179,8 @@ def build_stage1_discriminator():
 	input_layer2 = Input(shape=(4, 4, 128))
 	concat = concatenate([x, input_layer2])
 
-	x1 = Conv2D(512, kernel_size=(1,1), padding='same', strides=1, use_bias=False)(concat)
+	x1 = Conv2D(512, kernel_size=(1,1), padding='same', strides=1, use_bias=False,
+				kernel_initializer='he_uniform')(concat)
 	x1 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x1 = LeakyReLU(alpha=0.2)(x)
 
@@ -246,11 +251,13 @@ def residual_block(input):
 	Returns:
 		Layer with computed identity mapping.
 	"""
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(input)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False,
+				kernel_initializer='he_uniform')(input)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 	
-	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = Conv2D(512, kernel_size=(3,3), padding='same', use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	
 	x = add([x, input])
@@ -274,16 +281,19 @@ def build_stage2_generator():
 
 	# Downsampling block
 	x = ZeroPadding2D(padding=(1,1))(input_images)
-	x = Conv2D(128, kernel_size=(3,3), strides=1, use_bias=False)(x)
+	x = Conv2D(128, kernel_size=(3,3), strides=1, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = ReLU()(x)
 
 	x = ZeroPadding2D(padding=(1,1))(x)
-	x = Conv2D(256, kernel_size=(4,4), strides=2, use_bias=False)(x)
+	x = Conv2D(256, kernel_size=(4,4), strides=2, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 
 	x = ZeroPadding2D(padding=(1,1))(x)
-	x = Conv2D(512, kernel_size=(4,4), strides=2, use_bias=False)(x)
+	x = Conv2D(512, kernel_size=(4,4), strides=2, use_bias=False,
+				kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 
@@ -292,7 +302,7 @@ def build_stage2_generator():
 
 	# Residual Blocks
 	x = ZeroPadding2D(padding=(1,1))(concat)
-	x = Conv2D(512, kernel_size=(3,3), use_bias=False)(x)
+	x = Conv2D(512, kernel_size=(3,3), use_bias=False, kernel_initializer='he_uniform')(x)
 	x = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x)
 	x = ReLU()(x)
 
@@ -307,7 +317,7 @@ def build_stage2_generator():
 	x = UpSamplingBlock(x, 128)
 	x = UpSamplingBlock(x, 64)
 
-	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False)(x)
+	x = Conv2D(3, kernel_size=(3,3), padding='same', use_bias=False, kernel_initializer='he_uniform')(x)
 	x = Activation('tanh')(x)
 	
 	stage2_gen = Model(inputs=[input_layer1, input_images], outputs=[x, mls])
@@ -327,7 +337,8 @@ def build_stage2_discriminator():
 	"""
 	input_layer1 = Input(shape=(256, 256, 3))
 
-	x = Conv2D(64, kernel_size=(4,4), padding='same', strides=2, use_bias=False)(input_layer1)
+	x = Conv2D(64, kernel_size=(4,4), padding='same', strides=2, use_bias=False,
+				kernel_initializer='he_uniform')(input_layer1)
 	x = LeakyReLU(alpha=0.2)(x)
 
 	x = ConvBlock(x, 128)
@@ -349,7 +360,7 @@ def build_stage2_discriminator():
 	input_layer2 = Input(shape=(4, 4, 128))
 	concat = concatenate([x2, input_layer2])
 
-	x3 = Conv2D(512, kernel_size=(1,1), strides=1, padding='same')(concat)
+	x3 = Conv2D(512, kernel_size=(1,1), strides=1, padding='same', kernel_initializer='he_uniform')(concat)
 	x3 = BatchNormalization(gamma_initializer='ones', beta_initializer='zeros')(x3)
 	x3 = LeakyReLU(alpha=0.2)(x3)
 
