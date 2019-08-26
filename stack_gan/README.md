@@ -29,7 +29,7 @@ unzip birds.zip
 python model.py
 ```
 #### Architecture
-<img src="assets/stackgan_framework.jpg" width="850px" height="370px"/>
+<img src="../assets/stackgan_framework.jpg" width="850px" height="370px"/>
 
 - Stage 1
 	- Text Encoder Network
