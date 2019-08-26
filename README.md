@@ -25,7 +25,7 @@ The official models (including Mask R-CNN and StackGAN) will be upgraded with tf
 |E2|Custom ResNet - Part 2 |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
 |E3|Face Aging - Model |[Here](https://github.com/Vishal-V/GSoC/blob/master/face_app/model.py)|Complete|[ #83](https://github.com/tensorflow/examples/pull/83)|
 |E3|Custom ResNet - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Complete|[ #79](https://github.com/tensorflow/examples/pull/79)|
-|E1|Autoencoder - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/notebook/autoencoder.ipynb)| Complete |[ #68](https://github.com/tensorflow/examples/pull/68)|
+|E3|Autoencoder - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/notebook/autoencoder.ipynb)| Complete |[ #68](https://github.com/tensorflow/examples/pull/68)|
 |E3|StackGAN - Notebook |[Here](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb)|Ongoing|[ #77](https://github.com/tensorflow/examples/pull/77)|
 |E3|Mask R-CNN - TF 2.0 Model |[Here](https://github.com/Vishal-V/GSoC/tree/master/mask_rcnn)|Ongoing|[ #78](https://github.com/tensorflow/examples/pull/78)|
 #
