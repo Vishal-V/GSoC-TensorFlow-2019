@@ -307,8 +307,10 @@ def main(path):
     age_categories = np.reshape(np.array(categories), [len(categories), 1])
     num_classes = len(set(categories))
     y = to_categorical(age_categories, num_classes=num_classes)
+    print(f'Loaded labels and image paths. Preparing to load images...')
 
     loaded_images = load_images(path, images, (image_shape[0], image_shape[1]))
+    print(f'Loaded all images into an array.')
 
     real = np.ones((batch_size, 1), dtype=np.float32) * 0.9
     fake = np.zeros((batch_size, 1), dtype=np.float32) * 0.1
@@ -338,7 +340,7 @@ def main(path):
                 conditioning_variable = to_categorical(conditioning_variable, num_classes=6)
 
                 g_curr = adversarial.train_on_batch([latent_space, conditioning_variable], [1]*batch_size)
-            print(f'Gen_loss:{g_curr}\nDisc_loss:{d_curr}')
+                    print(f'Gen_loss:{g_curr}\nDisc_loss:{d_curr}')
 
             if epoch % 10 == 0:
                 mini_batch = loaded_images[:batch_size]
@@ -405,7 +407,7 @@ def main(path):
         resize_model = make_resize()
         resize_model.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam())
 
-        face_rec = make_face_recognition()
+        face_rec = make_face_recognition(fr_image_shape)
         face_rec.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam())
         face_rec.trainable = False
 
