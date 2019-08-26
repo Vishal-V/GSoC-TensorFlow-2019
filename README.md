@@ -74,5 +74,7 @@ All pull requests can be found here [PRs Link](https://github.com/tensorflow/exa
 - Mask R-CNN fixes and possible rebuild from scratch to be TF 2.0 native.
 - Age-cGAN Trained Weights for developers to build their own version of FaceApp
 ## **Challenges**
-- The most challenging task was the Mask R-CNN migration.
+- The most challenging task was the Mask R-CNN migration. I spent a lot of time on this and even translated the autodiff code that used graph functions. The migration was not fully completed and a possible rebuild from scratch might be a better alternative.
 ## **Learnings**
+- I learnt a whole lot of best practices in these 3 months along with building for scale and writing maintainable code. I got an in-depth look into tensorflow as a framework and all the amazing code written that makes this the most popular AI framework. 
+- Not to forget the amazing mentors I had who helped me along the way and solved all my doubts at the earliest. I also got a taste of just how much effort goes into benchmarking and creating official deep learning model implementations.
