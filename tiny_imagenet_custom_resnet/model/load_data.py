@@ -73,7 +73,6 @@ class TinyImageNet(object):
 		        horizontal_flip=True, # Horizontal Flip
 		        fill_mode="reflect", # Fills empty with reflections
 		        brightness_range=[0.4, 1.6]  # Increasing/decreasing brightness
-		        #preprocessing_function=occlusion(v_l=0, v_h=1, pixel_level=pixel_level)
 		)
 
 		train_generator = train_datagen.flow_from_directory(
@@ -96,4 +95,8 @@ class TinyImageNet(object):
 		    seed=42
 		)
 
-		return train_datagen, val_datagen
+		return train_generator, val_generator
+
+if __name__ == '__main__':
+	ti = TinyImageNet()
+	ti.download_data()

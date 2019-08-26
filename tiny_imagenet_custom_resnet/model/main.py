@@ -18,15 +18,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 from absl import app
 from resnet import ResNet
 from load_data import TinyImageNet
-import tensorflow as TensorFlow
+import tensorflow as tf
 assert tf.__version__.startswith('2.')
 
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.callbacks import LearningRateScheduler
-
+from tensorflow.keras.callbacks import Callback, LearningRateScheduler
 
 class EpochCheckpoint(Callback):
 	def __init__(self, outputPath, every=5, startAt=0):
@@ -37,7 +36,7 @@ class EpochCheckpoint(Callback):
 
 	def on_epoch_end(self, epoch, log={}):
 		if (self.intEpoch+1) % self.every == 0:
-        	path = os.path.sep.join([self.outputPath, 
+			path = os.path.sep.join([self.outputPath, 
 					"custom_resnet.hdf5".format(self.intEpoch+1)])
 			self.model.save(path, overwrite=True)
 		self.intEpoch += 1
@@ -190,3 +189,4 @@ if __name__ == '__main__':
 	NUM_EPOCHS = 30
 	INIT_LR = 0.01
 	app.run(run_main)
+	
