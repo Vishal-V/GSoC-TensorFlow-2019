@@ -35,7 +35,7 @@ Migrated the model at `models/research` to use `tf.GradientTape()` and the Subcl
 - **Migration Guide**: https://github.com/Vishal-V/GSoC/blob/master/autoencoder/README.md  
 - **Notebook**: [GitHub Link](https://github.com/Vishal-V/GSoC/blob/master/autoencoder/notebook/autoencoder.ipynb), [Colab Link](https://colab.research.google.com/drive/1aZ0mEFEui1A7FPWMylvjiVZ5XZIX7S9w)
 ### Custom ResNet for TinyImageNet
-Most scholars who complete the Stanford CS231N course attempt the final assignment to train a model on the TinyImageNet dataset without transfer learning. But, those scholars with resource constraints or only Google colab to fall back on find it difficult to train a decent model . This is a custom ResNet with 10x lesser parameters for image classification on the TinyImageNet dataset. The training strategy and data loading features are made efficient to enable training on Google colab. The model tarining uses `progressive resizing` of image sizes to enable the model to learn scale independent semantic features. The data is laoded using the `ImageDataGenerator` class.
+Most scholars who complete the Stanford CS231N course attempt the final assignment to train a model on the TinyImageNet dataset without transfer learning. But, those scholars with resource constraints or only Google colab to fall back on find it difficult to train a decent model . This is a custom ResNet with 10x lesser parameters for image classification on the TinyImageNet dataset. The training strategy and data loading features are made efficient to enable training on Google colab. The model training uses `progressive resizing` of image sizes to enable the model to learn scale independent semantic features. The data is loaded using the `ImageDataGenerator` class.
 - **Model**: https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet/model
 - **Instructions**: https://github.com/Vishal-V/GSoC/tree/master/tiny_imagenet_custom_resnet
 - **Notebook**: [GitHub Link](https://github.com/Vishal-V/GSoC/blob/master/tiny_imagenet_custom_resnet/tiny_imagenet_custom_resnet.ipynb), [Colab Link](https://colab.research.google.com/drive/1SZLecFzKuU7TVCoCzTq285sEbjlT12A6)
@@ -72,7 +72,8 @@ All pull requests can be found here [PRs Link](https://github.com/tensorflow/exa
 - **Phase 3**: Completed the R&D and created the Age Conditional GAN for the Wiki cropped faces dataset. The plan was to train it on GCP and upload the weights for developers to make their own FaceApp, but due to the lack of cloud credits, this was put away for the time being. The final custom resnet model was chosen from among the multiple models built and the corresponding notebook was completed. The final autoencoder notebook was also completed. All models and their respecive bugs were fixed and the corresponding documentation was updated.
 ## **What's left?**
 - Mask R-CNN fixes and possible rebuild from scratch to be TF 2.0 native.
-- Age-cGAN Trained Weights for developers to build their own version of FaceApp
+- Age-cGAN Trained Weights for developers to build their own version of FaceApp.
+- The Age-cGAN preprocesses all 62k images and stores it in a list just once to use it for every epoch without having to preprocess all the images over and over again. This has a significany overhead first up but eases it for the rest of the training. This may have a better solution.
 ## **Challenges**
 - The most challenging task was the Mask R-CNN migration. I spent a lot of time on this and even translated the autodiff code that used graph functions. The migration was not fully completed and a possible rebuild from scratch might be a better alternative.
 ## **Learnings**
