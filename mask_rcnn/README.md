@@ -42,4 +42,5 @@ You can step-through and debug the function using standard Python tools like pdb
 Although tf 2.0 is eager by default, graph mode execution is the most efficient way to execute a model. The `tf.function` decorator marks the function for JIT compilation using Tensorflow graphs. This uses [AutoGraph](https://render.githubusercontent.com/view/autograph.ipynb) which also ensures execution in contexts (for tflite, tfjs...etc) and manages control dependencies.   
 Here, the decorator was used in the `call()` function of Autoencoder.   
 #
-
+### References
+1. **Mask R-CNN**[ [Arxiv Link]](https://arxiv.org/abs/1703.06870)
